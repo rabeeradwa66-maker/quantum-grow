@@ -1,6 +1,9 @@
+
+import asyncio
+
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart
-from aiogram.types import Message
+from aiogram.types import KeyboardButton, Message, ReplyKeyboardMarkup
 from sqlalchemy import select
 
 from .config import settings
@@ -11,8 +14,23 @@ from .models import DemoBalance, User
 bot = Bot(token=settings.telegram_bot_token)
 dp = Dispatcher()
 
-
 Base.metadata.create_all(bind=engine)
+
+
+def main_keyboard():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [
+                KeyboardButton(text="💰 الرصيد التجريبي"),
+                KeyboardButton(text="📈 التداول التجريبي"),
+            ],
+            [
+                KeyboardButton(text="🌐 اللغة"),
+                KeyboardButton(text="ℹ️ معلومات المشروع"),
+            ],
+        ],
+        resize_keyboard=True,
+    )
 
 
 @dp.message(CommandStart())
@@ -39,15 +57,15 @@ async def start(message: Message):
                 currency="USDT",
             )
             db.add(balance)
+
             db.commit()
 
     await message.answer(
         "مرحبًا بك في Quantum Grow 🚀\n\n"
-        "هذه نسخة تجريبية من المنصة.\n\n"
-        "اختر من القائمة:\n"
-        "💰 الرصيد التجريبي\n"
-        "🌐 اللغة\n"
-        "ℹ️ معلومات المشروع"
+        "هذه نسخة تجريبية من المنصة.\n"
+        "لا توجد أموال حقيقية في هذه النسخة.\n\n"
+        "اختر من القائمة:",
+        reply_markup=main_keyboard(),
     )
 
 
@@ -71,12 +89,23 @@ async def demo_balance(message: Message):
     )
 
 
+@dp.message(F.text == "📈 التداول التجريبي")
+async def demo_trading(message: Message):
+    await message.answer(
+        "📈 التداول التجريبي\n\n"
+        "هذه الخاصية مخصصة للتجربة فقط.\n"
+        "يمكننا لاحقًا إضافة شاشة للأصول والأسعار "
+        "وأوامر الشراء والبيع التجريبية."
+    )
+
+
 @dp.message(F.text == "🌐 اللغة")
 async def language(message: Message):
     await message.answer(
-        "🌐 Language / اللغة\n\n"
+        "🌐 اللغة / Language\n\n"
         "🇸🇦 العربية\n"
-        "🇬🇧 English"
+        "🇬🇧 English\n\n"
+        "دعم اللغتين سيتم تفعيله في الواجهة التالية."
     )
 
 
@@ -84,7 +113,7 @@ async def language(message: Message):
 async def about(message: Message):
     await message.answer(
         "🚀 Quantum Grow\n\n"
-        "منصة تجريبية لواجهة تداول واستثمار.\n\n"
+        "منصة تجريبية لواجهة التداول والاستثمار.\n\n"
         "⚠️ هذه النسخة لا تستقبل أموالًا حقيقية "
         "ولا تنفذ عمليات مالية."
     )
@@ -96,6 +125,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    import asyncio
-
     asyncio.run(main())
