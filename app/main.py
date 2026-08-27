@@ -78,6 +78,41 @@ def main_keyboard():
         ],
         resize_keyboard=True
     )
+    @dp.message(F.text == "💰 خطط الاستثمار")
+async def investment_plans(message: Message):
+    with SessionLocal() as db:
+        plans = db.scalars(
+            select(InvestmentPlan).where(
+                InvestmentPlan.is_active == True
+            ).order_by(InvestmentPlan.amount)
+        ).all()
+
+    if not plans:
+        await message.answer("لا توجد خطط استثمار متاحة حاليًا.")
+        return
+
+    text = "💰 خطط Quantum Grow\n\n"
+
+    for plan in plans:
+        expected = plan.amount * plan.target_rate
+
+        text += (
+            f"🔹 {plan.name}\n"
+            f"💵 المبلغ: {plan.amount:,.2f} USDT\n"
+            f"⏱ المدة المستهدفة: {plan.duration_days} أيام\n"
+            f"📈 العائد المستهدف: {plan.target_rate * 100:.0f}%\n"
+            f"💰 العائد المستهدف: {expected:,.2f} USDT\n"
+            f"━━━━━━━━━━━━━━\n"
+        )
+
+    text += (
+        "\n⚠️ ملاحظة مهمة:\n"
+        "الدورة المستهدفة لمدة 7 أيام، والعائد المستهدف 18%. "
+        "النتيجة الفعلية تعتمد على أداء النظام وظروف السوق. "
+        "قد ينطبق برنامج التعويض وفق شروط الخدمة المعلنة."
+    )
+
+    await message.answer(text)
 
 
 @dp.message(CommandStart())
