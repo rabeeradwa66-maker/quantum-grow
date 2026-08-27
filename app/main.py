@@ -78,6 +78,7 @@ def main_keyboard():
         ],
         resize_keyboard=True
     )
+    
     @dp.message(F.text == "💰 خطط الاستثمار")
 async def investment_plans(message: Message):
     with SessionLocal() as db:
