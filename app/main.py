@@ -1,4 +1,3 @@
-
 import asyncio
 
 from aiogram import Bot, Dispatcher, F
@@ -14,7 +13,10 @@ from .models import DemoBalance, User, InvestmentPlan
 bot = Bot(token=settings.telegram_bot_token)
 dp = Dispatcher()
 
+
 Base.metadata.create_all(bind=engine)
+
+
 def seed_investment_plans():
     plans = [
         (1, "Starter", 10),
@@ -56,6 +58,7 @@ def seed_investment_plans():
 
 seed_investment_plans()
 
+
 def main_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
@@ -78,13 +81,16 @@ def main_keyboard():
         ],
         resize_keyboard=True
     )
-    @dp.message(F.text == "💰 خطط الاستثمار")
-    async def investment_plans(message: Message):
+
+
+@dp.message(F.text == "💰 خطط الاستثمار")
+async def investment_plans(message: Message):
+
     with SessionLocal() as db:
         plans = db.scalars(
-            select(InvestmentPlan).where(
-                InvestmentPlan.is_active == True
-            ).order_by(InvestmentPlan.amount)
+            select(InvestmentPlan)
+            .where(InvestmentPlan.is_active == True)
+            .order_by(InvestmentPlan.amount)
         ).all()
 
     if not plans:
@@ -99,30 +105,25 @@ def main_keyboard():
         text += (
             f"🔹 {plan.name}\n"
             f"💵 المبلغ: {plan.amount:,.2f} USDT\n"
-            f"⏱ المدة المستهدفة: {plan.duration_days} أيام\n"
+            f"⏱ المدة: {plan.duration_days} أيام\n"
             f"📈 العائد المستهدف: {plan.target_rate * 100:.0f}%\n"
-            f"💰 العائد المستهدف: {expected:,.2f} USDT\n"
-            f"━━━━━━━━━━━━━━\n"
+            f"💰 المتوقع: {expected:,.2f} USDT\n"
+            "━━━━━━━━━━━━━━\n"
         )
 
-    text += (
-        "\n⚠️ ملاحظة مهمة:\n"
-        "الدورة المستهدفة لمدة 7 أيام، والعائد المستهدف 18%. "
-        "النتيجة الفعلية تعتمد على أداء النظام وظروف السوق. "
-        "قد ينطبق برنامج التعويض وفق شروط الخدمة المعلنة."
-    )
-
     await message.answer(text)
-
-
-@dp.message(CommandStart())
+    @dp.message(CommandStart())
 async def start(message: Message):
+
     telegram_id = message.from_user.id
     username = message.from_user.username
 
     with SessionLocal() as db:
+
         user = db.scalar(
-            select(User).where(User.telegram_id == telegram_id)
+            select(User).where(
+                User.telegram_id == telegram_id
+            )
         )
 
         if not user:
@@ -131,6 +132,7 @@ async def start(message: Message):
                 username=username,
                 language="ar",
             )
+
             db.add(user)
 
             balance = DemoBalance(
@@ -138,12 +140,13 @@ async def start(message: Message):
                 balance=0.0,
                 currency="USDT",
             )
-            db.add(balance)
 
+            db.add(balance)
             db.commit()
 
+
     await message.answer(
-        "مرحبًا بك في Quantum Grow 🚀\n\n"
+        "🚀 مرحبًا بك في Quantum Grow\n\n"
         "هذه نسخة تجريبية من المنصة.\n"
         "لا توجد أموال حقيقية في هذه النسخة.\n\n"
         "اختر من القائمة:",
@@ -151,11 +154,13 @@ async def start(message: Message):
     )
 
 
-@dp.message(F.text == "💰 الرصيد التجريبي")
+@dp.message(F.text == "💼 رصيدي")
 async def demo_balance(message: Message):
+
     telegram_id = message.from_user.id
 
     with SessionLocal() as db:
+
         balance = db.scalar(
             select(DemoBalance).where(
                 DemoBalance.telegram_id == telegram_id
@@ -165,44 +170,76 @@ async def demo_balance(message: Message):
     amount = balance.balance if balance else 0.0
 
     await message.answer(
-        f"💰 رصيدك التجريبي:\n\n"
+        f"💼 رصيدك التجريبي:\n\n"
         f"{amount:.2f} USDT\n\n"
-        "هذا الرصيد تجريبي ولا يمثل أموالًا حقيقية."
+        "⚠️ هذا رصيد تجريبي وليس أموالًا حقيقية."
     )
 
 
-@dp.message(F.text == "📈 التداول التجريبي")
-async def demo_trading(message: Message):
+@dp.message(F.text == "🤖 حالة AI")
+async def ai_status(message: Message):
+
     await message.answer(
-        "📈 التداول التجريبي\n\n"
-        "هذه الخاصية مخصصة للتجربة فقط.\n"
-        "يمكننا لاحقًا إضافة شاشة للأصول والأسعار "
-        "وأوامر الشراء والبيع التجريبية."
+        "🤖 حالة نظام AI\n\n"
+        "🟢 النظام يعمل في الوضع التجريبي.\n"
+        "📊 تحليل الأسواق غير مفعل حاليًا.\n"
+        "سيتم إضافة المحرك الذكي في المرحلة القادمة."
+    )
+
+
+@dp.message(F.text == "📊 استثماراتي")
+async def my_investments(message: Message):
+
+    await message.answer(
+        "📊 استثماراتي\n\n"
+        "لا توجد استثمارات حالية.\n"
+        "هذه نسخة تجريبية."
+    )
+
+
+@dp.message(F.text == "➕ الإيداع")
+async def deposit(message: Message):
+
+    await message.answer(
+        "➕ الإيداع\n\n"
+        "سيتم إضافة نظام طلبات الإيداع والمحافظ لاحقًا."
+    )
+
+
+@dp.message(F.text == "➖ السحب")
+async def withdrawal(message: Message):
+
+    await message.answer(
+        "➖ السحب\n\n"
+        "سيتم إضافة نظام طلبات السحب لاحقًا."
     )
 
 
 @dp.message(F.text == "🌐 اللغة")
 async def language(message: Message):
+
     await message.answer(
-        "🌐 اللغة / Language\n\n"
+        "🌐 Language\n\n"
         "🇸🇦 العربية\n"
         "🇬🇧 English\n\n"
-        "دعم اللغتين سيتم تفعيله في الواجهة التالية."
+        "دعم اللغتين سيتم تفعيله لاحقًا."
     )
 
 
 @dp.message(F.text == "ℹ️ معلومات المشروع")
 async def about(message: Message):
+
     await message.answer(
         "🚀 Quantum Grow\n\n"
         "منصة تجريبية لواجهة التداول والاستثمار.\n\n"
-        "⚠️ هذه النسخة لا تستقبل أموالًا حقيقية "
-        "ولا تنفذ عمليات مالية."
+        "⚠️ لا يتم استقبال أموال حقيقية حاليًا."
     )
 
 
 async def main():
+
     print("Quantum Grow bot is starting...")
+
     await dp.start_polling(bot)
 
 
