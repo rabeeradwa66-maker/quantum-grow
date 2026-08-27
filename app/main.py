@@ -112,7 +112,7 @@ async def investment_plans(message: Message):
         )
 
     await message.answer(text)
-    @dp.message(CommandStart())
+@dp.message(CommandStart())
 async def start(message: Message):
 
     telegram_id = message.from_user.id
