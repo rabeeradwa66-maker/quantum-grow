@@ -8,14 +8,53 @@ from sqlalchemy import select
 
 from .config import settings
 from .db import Base, SessionLocal, engine
-from .models import DemoBalance, User
+from .models import DemoBalance, User, InvestmentPlan
 
 
 bot = Bot(token=settings.telegram_bot_token)
 dp = Dispatcher()
 
 Base.metadata.create_all(bind=engine)
+def seed_investment_plans():
+    plans = [
+        (1, "Starter", 10),
+        (2, "Basic", 25),
+        (3, "Bronze", 50),
+        (4, "Silver", 100),
+        (5, "Gold", 250),
+        (6, "Platinum", 500),
+        (7, "Pro", 1000),
+        (8, "Advanced", 2500),
+        (9, "Premium", 5000),
+        (10, "Elite", 10000),
+        (11, "VIP", 15000),
+        (12, "Quantum", 20000),
+    ]
 
+    with SessionLocal() as db:
+        for plan_id, name, amount in plans:
+            existing = db.scalar(
+                select(InvestmentPlan).where(
+                    InvestmentPlan.id == plan_id
+                )
+            )
+
+            if not existing:
+                db.add(
+                    InvestmentPlan(
+                        id=plan_id,
+                        name=name,
+                        amount=amount,
+                        duration_days=7,
+                        target_rate=0.18,
+                        is_active=True,
+                    )
+                )
+
+        db.commit()
+
+
+seed_investment_plans()
 
 def main_keyboard():
     return ReplyKeyboardMarkup(
