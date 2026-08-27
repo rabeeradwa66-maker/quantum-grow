@@ -60,15 +60,23 @@ def main_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="💰 الرصيد التجريبي"),
-                KeyboardButton(text="📈 التداول التجريبي"),
+                KeyboardButton(text="💰 خطط الاستثمار"),
+                KeyboardButton(text="➕ الإيداع"),
+            ],
+            [
+                KeyboardButton(text="➖ السحب"),
+                KeyboardButton(text="💼 رصيدي"),
+            ],
+            [
+                KeyboardButton(text="📊 استثماراتي"),
+                KeyboardButton(text="🤖 حالة AI"),
             ],
             [
                 KeyboardButton(text="🌐 اللغة"),
                 KeyboardButton(text="ℹ️ معلومات المشروع"),
             ],
         ],
-        resize_keyboard=True,
+        resize_keyboard=True
     )
 
 
