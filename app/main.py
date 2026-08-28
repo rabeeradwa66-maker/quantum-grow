@@ -2,13 +2,7 @@ import asyncio
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart
-from aiogram.types import (
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    KeyboardButton,
-    Message,
-    ReplyKeyboardMarkup,
-)
+from aiogram.types import InlineKeyboardButton, KeyboardButton, Message, ReplyKeyboardMarkup
 from sqlalchemy import select
 
 from .config import settings
@@ -154,6 +148,16 @@ async def deposit(message: Message):
         "اختر العملة التي تريد الإيداع بها:",
         reply_markup=keyboard,
     )
+    @dp.callback_query(F.data.startswith("deposit_"))
+async def deposit_currency(callback):
+    currency = callback.data.replace("deposit_", "").upper()
+
+    await callback.message.answer(
+        f"اخترت الإيداع بواسطة {currency}.\n\n"
+        "سيتم إنشاء طلب إيداع وإرسال تفاصيل الدفع لك."
+    )
+
+    await callback.answer()
 @dp.message(CommandStart())
 async def start(message: Message):
 
