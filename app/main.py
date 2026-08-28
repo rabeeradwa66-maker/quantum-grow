@@ -72,7 +72,7 @@ async def ensure_user(message: Message):
         user = db.scalar(select(User).where(User.telegram_id == uid))
         if not user:
             db.add(User(telegram_id=uid, username=username))
-            db.add(Balance(telegram_id=uid, balance=0.0))
+            db.add(DemoBalance(telegram_id=uid, balance=0.0))
             db.commit()
 
 @dp.message(CommandStart())
