@@ -6,7 +6,7 @@ from sqlalchemy import select
 
 from .config import settings
 from .db import Base, SessionLocal, engine
-from .models import Balance, DepositRequest, Investment, InvestmentPlan, User, WithdrawalRequest
+from .models import DemoBalance, DepositRequest, InvestmentPlan, User, WithdrawalRequest
 
 Base.metadata.create_all(bind=engine)
 bot = Bot(token=settings.telegram_bot_token)
