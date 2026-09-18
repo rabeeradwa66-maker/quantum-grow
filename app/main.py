@@ -10,6 +10,7 @@ from aiogram.types import (
     KeyboardButton,
     Message,
 )
+
 from sqlalchemy import select
 
 from .config import settings
@@ -29,6 +30,10 @@ Base.metadata.create_all(bind=engine)
 bot = Bot(token=settings.telegram_bot_token)
 dp = Dispatcher()
 
+
+# =========================================================
+# INVESTMENT PLANS
+# =========================================================
 
 PLANS = [
     (1, "Starter", 10, 7, 0.18),
@@ -67,7 +72,6 @@ def seed_plans():
                     )
                 )
             else:
-                # Keep the existing plan synchronized
                 plan.name = name
                 plan.amount = amount
                 plan.duration_days = days
@@ -80,29 +84,785 @@ def seed_plans():
 seed_plans()
 
 
-def keyboard():
+# =========================================================
+# TRANSLATIONS
+# =========================================================
+
+TEXTS = {
+    "ar": {
+        "welcome": (
+            "🚀 مرحبًا بك في Quantum Grow\n\n"
+            "منصة لإدارة الحسابات والإيداعات "
+            "والسحوبات والاستثمارات.\n\n"
+            "⚠️ الاستثمارات تنطوي على مخاطر، "
+            "والعائد المعروض هو عائد مستهدف وفق إعدادات الخطة "
+            "وليس ضمانًا لنتيجة السوق.\n\n"
+            "اختر من القائمة:"
+        ),
+
+        "plans": "💰 خطط الاستثمار",
+        "deposit": "➕ الإيداع",
+        "withdraw": "➖ السحب",
+        "balance": "💼 رصيدي",
+        "investments": "📊 استثماراتي",
+        "status": "🤖 حالة النظام",
+        "language": "🌐 اللغة",
+        "info": "ℹ️ معلومات",
+        "admin": "👨‍💼 لوحة المسؤول",
+
+        "choose_language": (
+            "🌐 اختيار اللغة\n\n"
+            "اختر اللغة التي تريد استخدامها:"
+        ),
+
+        "arabic_selected": "🇸🇦 تم اختيار اللغة العربية.",
+        "english_selected": "🇬🇧 English language selected.",
+
+        "choose_plan": (
+            "💰 خطط الاستثمار\n\n"
+            "اختر الخطة التي تريد الاطلاع عليها:"
+        ),
+
+        "investment_duration": "⏱ المدة",
+        "target_return": "📈 العائد المستهدف",
+        "target_total": "🎯 الإجمالي المستهدف",
+        "investment_amount": "💵 الاستثمار",
+
+        "risk_plan": (
+            "\n⚠️ العائد المستهدف ليس ضمانًا للربح. "
+            "النتيجة الفعلية تعتمد على أداء النظام "
+            "وظروف السوق وشروط الخدمة."
+        ),
+
+        "plan_details": "📋 تفاصيل الخطة",
+        "plan": "🔹 الخطة",
+        "amount": "💵 المبلغ",
+        "target_profit": "💰 العائد المستهدف",
+        "buy_plan": "🛒 شراء الخطة من الرصيد",
+        "back_plans": "🔙 العودة للخطط",
+
+        "locked_message": (
+            "🔒 بعد شراء الخطة يصبح المبلغ المستثمر "
+            "محجوزًا حتى نهاية الدورة."
+        ),
+
+        "plan_not_found": "❌ الخطة غير موجودة.",
+
+        "insufficient": (
+            "❌ لا يمكن شراء الخطة.\n\n"
+            "💰 سعر الخطة: {amount:,.2f} USDT\n"
+            "💼 رصيدك المتاح: {balance:,.2f} USDT\n"
+            "📥 المبلغ المطلوب: {required:,.2f} USDT\n\n"
+            "يمكنك إيداع المبلغ المطلوب ثم شراء الخطة."
+        ),
+
+        "purchase_success": (
+            "✅ تم شراء الخطة بنجاح\n\n"
+            "🆔 رقم الاستثمار: #{id}\n"
+            "🔹 الخطة: {plan}\n"
+            "💵 المبلغ المستثمر: {amount:,.2f} USDT\n"
+            "⏱ المدة: {days} أيام\n"
+            "📅 تاريخ البداية: {start} UTC\n"
+            "📅 تاريخ الانتهاء: {end} UTC\n\n"
+            "📈 العائد المستهدف: {profit:,.2f} USDT\n\n"
+            "🔒 تم حجز مبلغ الاستثمار حتى انتهاء الدورة.\n"
+            "💼 رصيدك المتاح الآن: {balance:,.2f} USDT\n\n"
+            "⚠️ العائد المستهدف ليس ضمانًا لنتيجة السوق."
+        ),
+
+        "purchase_button": "تم شراء الخطة.",
+
+        "deposit_choose": (
+            "➕ الإيداع\n\n"
+            "اختر طريقة الدفع:"
+        ),
+
+        "usdt": "🟢 USDT",
+        "usdc": "🔵 USDC",
+        "btc": "🟠 BTC",
+        "eth": "🔷 ETH",
+        "sham": "🇸🇾 شام كاش",
+
+        "deposit_not_configured": (
+            "⚠️ لم يتم إعداد {asset} بعد.\n"
+            "تواصل مع الإدارة."
+        ),
+
+        "sham_deposit": (
+            "🇸🇾 إيداع عبر شام كاش\n\n"
+            "🆔 معرّف الاستلام:\n{address}\n\n"
+            "بعد إرسال المبلغ، استخدم الأمر التالي "
+            "لتسجيل العملية:\n\n"
+            "/deposit SHAM_CASH SHAM_CASH المبلغ رقم_المرجع"
+        ),
+
+        "crypto_deposit": (
+            "➕ إيداع {asset}\n\n"
+            "🌐 الشبكة: {network}\n"
+            "📍 العنوان:\n{address}\n\n"
+            "بعد التحويل استخدم الأمر التالي:\n\n"
+            "/deposit {asset} {network} المبلغ TX_HASH\n\n"
+            "مثال:\n"
+            "/deposit {asset} {network} 100 TX123456"
+        ),
+
+        "deposit_syntax": (
+            "❌ الصيغة غير صحيحة.\n\n"
+            "للعملات الرقمية:\n"
+            "/deposit USDT TRC20 100 TX_HASH\n\n"
+            "لشام كاش:\n"
+            "/deposit SHAM_CASH SHAM_CASH 100 REFERENCE"
+        ),
+
+        "unsupported_payment": "❌ طريقة الدفع غير مدعومة.",
+        "invalid_amount": "❌ المبلغ غير صحيح.",
+
+        "deposit_created": (
+            "✅ تم تسجيل طلب الإيداع #{id}.\n\n"
+            "⏳ الطلب بانتظار مراجعة الإدارة."
+        ),
+
+        "admin_deposit": (
+            "📥 طلب إيداع جديد\n\n"
+            "🆔 الطلب: #{id}\n"
+            "👤 المستخدم: @{username}\n"
+            "Telegram ID: {user_id}\n"
+            "💳 الطريقة: {asset}\n"
+            "🌐 الشبكة: {network}\n"
+            "💰 المبلغ: {amount:,.2f}\n"
+            "🧾 المرجع / TX Hash:\n{reference}\n\n"
+            "اختر الإجراء:"
+        ),
+
+        "approve_deposit": "✅ قبول الإيداع",
+        "reject": "❌ رفض",
+
+        "deposit_approved": (
+            "✅ تم قبول الإيداع\n\n"
+            "🆔 الطلب: #{id}\n"
+            "💳 العملة: {asset}\n"
+            "💰 المبلغ: {amount:,.2f}\n\n"
+            "تم تحديث رصيد حسابك."
+        ),
+
+        "deposit_rejected": (
+            "❌ تم رفض طلب الإيداع #{id}.\n\n"
+            "يرجى التواصل مع الإدارة إذا كنت تعتقد أن هناك خطأ."
+        ),
+
+        "balance_title": (
+            "💼 رصيد الحساب\n\n"
+            "💵 الرصيد المتاح: {balance:,.2f} USDT\n"
+            "🔒 المبلغ المستثمر والمحجوز: {locked:,.2f} USDT\n\n"
+            "📊 الاستثمارات النشطة: {count}"
+        ),
+
+        "withdraw_help": (
+            "➖ السحب\n\n"
+            "لإنشاء طلب سحب أرسل:\n\n"
+            "/withdraw USDT TRC20 100 YOUR_WALLET_ADDRESS\n\n"
+            "⚠️ لا يمكن سحب الأموال المحجوزة داخل "
+            "استثمار نشط."
+        ),
+
+        "withdraw_syntax": (
+            "❌ الصيغة الصحيحة:\n"
+            "/withdraw USDT TRC20 100 YOUR_WALLET_ADDRESS"
+        ),
+
+        "unsupported_withdraw": "❌ عملة السحب غير مدعومة.",
+
+        "withdraw_insufficient": (
+            "❌ الرصيد المتاح غير كافٍ.\n\n"
+            "💼 المتاح: {available:,.2f} USDT\n"
+            "💸 المطلوب: {amount:,.2f} USDT\n\n"
+            "الأموال الموجودة داخل الاستثمارات "
+            "النشطة غير قابلة للسحب."
+        ),
+
+        "withdraw_created": (
+            "✅ تم إنشاء طلب السحب #{id}.\n\n"
+            "⏳ الطلب بانتظار مراجعة الإدارة."
+        ),
+
+        "admin_withdraw": (
+            "💸 طلب سحب جديد\n\n"
+            "🆔 الطلب: #{id}\n"
+            "👤 المستخدم: @{username}\n"
+            "Telegram ID: {user_id}\n"
+            "💳 العملة: {asset}\n"
+            "🌐 الشبكة: {network}\n"
+            "💰 المبلغ: {amount:,.2f}\n"
+            "📍 محفظة المستلم:\n{wallet}\n\n"
+            "اختر الإجراء:"
+        ),
+
+        "approve_withdraw": "✅ قبول السحب",
+
+        "withdraw_approved": (
+            "✅ تمت الموافقة على طلب السحب\n\n"
+            "🆔 الطلب: #{id}\n"
+            "💳 العملة: {asset}\n"
+            "💰 المبلغ: {amount:,.2f}\n\n"
+            "سيتم تنفيذ التحويل ومشاركة TX Hash "
+            "بعد إتمام العملية."
+        ),
+
+        "withdraw_rejected": (
+            "❌ تم رفض طلب السحب #{id}.\n\n"
+            "لم يتم خصم أي مبلغ من رصيدك."
+        ),
+
+        "admin_panel": (
+            "👨‍💼 لوحة المسؤول\n\n"
+            "📥 /pending_deposits\n"
+            "💸 /pending_withdrawals\n"
+            "💰 /user_balance TELEGRAM_ID\n"
+            "📊 /system"
+        ),
+
+        "no_pending_deposits": "📥 لا توجد طلبات إيداع معلقة.",
+        "no_pending_withdrawals": "💸 لا توجد طلبات سحب معلقة.",
+
+        "user_balance_syntax": (
+            "الصيغة:\n/user_balance TELEGRAM_ID"
+        ),
+
+        "invalid_id": "❌ Telegram ID غير صحيح.",
+
+        "admin_balance": (
+            "💰 رصيد المستخدم\n\n"
+            "Telegram ID: {id}\n"
+            "💵 الرصيد المتاح: {balance:,.2f} USDT\n"
+            "🔒 المبلغ المستثمر: {locked:,.2f} USDT\n"
+            "📊 الاستثمارات النشطة: {count}"
+        ),
+
+        "system": (
+            "📊 حالة النظام\n\n"
+            "🟢 البوت يعمل\n"
+            "👥 المستخدمون: {users}\n"
+            "📥 إيداعات معلقة: {deposits}\n"
+            "💸 سحوبات معلقة: {withdrawals}\n"
+            "📊 استثمارات نشطة: {investments}"
+        ),
+
+        "no_investments": (
+            "📊 استثماراتي\n\n"
+            "لا توجد استثمارات مسجلة حاليًا."
+        ),
+
+        "my_investments": "📊 استثماراتي",
+
+        "active_investment": (
+            "🟢 #{id} — {plan}\n"
+            "💰 المبلغ: {amount:,.2f} USDT\n"
+            "🔒 الحالة: نشط ومحجوز\n"
+            "⏳ المتبقي تقريبًا: {days} يوم و {hours} ساعة\n"
+            "📅 الانتهاء: {end} UTC\n"
+            "━━━━━━━━━━━━━━\n"
+        ),
+
+        "waiting_settlement": (
+            "🟡 #{id} — {plan}\n"
+            "⏳ بانتظار التسوية...\n"
+            "━━━━━━━━━━━━━━\n"
+        ),
+
+        "completed_investment": (
+            "✅ #{id} — {plan}\n"
+            "💰 الأصل: {amount:,.2f} USDT\n"
+            "📈 العائد المستهدف: {profit:,.2f} USDT\n"
+            "💵 الإجمالي المسوى: {total:,.2f} USDT\n"
+            "🔓 أصبحت الأموال متاحة.\n"
+            "━━━━━━━━━━━━━━\n"
+        ),
+
+        "investment_footer": (
+            "\n⚠️ العائد المذكور هو عائد مستهدف "
+            "وليس ضمانًا للربح."
+        ),
+
+        "status_text": (
+            "🤖 حالة النظام\n\n"
+            "🟢 البوت يعمل ويستقبل الطلبات.\n"
+            "🟢 تتم مراقبة الاستثمارات المنتهية "
+            "وتسويتها تلقائيًا."
+        ),
+
+        "about": (
+            "🚀 Quantum Grow\n\n"
+            "إدارة الحسابات والإيداعات والسحوبات "
+            "والاستثمارات.\n\n"
+            "📅 مدة الدورة: 7 أيام\n"
+            "📈 العائد المستهدف حسب إعدادات الخطة.\n\n"
+            "⚠️ لا توجد أرباح مضمونة، والنتيجة الفعلية "
+            "تعتمد على أداء النظام وظروف السوق "
+            "وشروط الخدمة."
+        ),
+
+        "investment_completed": (
+            "🎉 انتهت دورة الاستثمار\n\n"
+            "🆔 الاستثمار: #{id}\n"
+            "💰 أصل الاستثمار: {principal:,.2f} USDT\n"
+            "📈 العائد المستهدف: {profit:,.2f} USDT\n"
+            "💵 المبلغ المعاد للرصد: {total:,.2f} USDT\n\n"
+            "✅ أصبح المبلغ متاحًا في رصيدك."
+        ),
+
+        "unauthorized": "⛔ غير مصرح لك.",
+        "not_found": "❌ الطلب غير موجود.",
+        "already_processed": "⚠️ تمت معالجة هذا الطلب مسبقًا.",
+        "insufficient_admin": "❌ الرصيد غير كافٍ.",
+    },
+
+    "en": {
+        "welcome": (
+            "🚀 Welcome to Quantum Grow\n\n"
+            "A platform for managing accounts, deposits, "
+            "withdrawals and investments.\n\n"
+            "⚠️ Investments involve risk. Any displayed return "
+            "is a target based on the plan settings and is not "
+            "a guarantee of market results.\n\n"
+            "Choose from the menu:"
+        ),
+
+        "plans": "💰 Investment Plans",
+        "deposit": "➕ Deposit",
+        "withdraw": "➖ Withdraw",
+        "balance": "💼 My Balance",
+        "investments": "📊 My Investments",
+        "status": "🤖 System Status",
+        "language": "🌐 Language",
+        "info": "ℹ️ Information",
+        "admin": "👨‍💼 Admin Panel",
+
+        "choose_language": (
+            "🌐 Language Selection\n\n"
+            "Choose your preferred language:"
+        ),
+
+        "arabic_selected": "🇸🇦 Arabic language selected.",
+        "english_selected": "🇬🇧 English language selected.",
+
+        "choose_plan": (
+            "💰 Investment Plans\n\n"
+            "Choose a plan to view its details:"
+        ),
+
+        "investment_duration": "⏱ Duration",
+        "target_return": "📈 Target Return",
+        "target_total": "🎯 Target Total",
+        "investment_amount": "💵 Investment",
+
+        "risk_plan": (
+            "\n⚠️ The target return is not a guarantee of profit. "
+            "Actual results depend on system performance, "
+            "market conditions and the applicable terms."
+        ),
+
+        "plan_details": "📋 Plan Details",
+        "plan": "🔹 Plan",
+        "amount": "💵 Amount",
+        "target_profit": "💰 Target Return",
+        "buy_plan": "🛒 Buy Plan from Balance",
+        "back_plans": "🔙 Back to Plans",
+
+        "locked_message": (
+            "🔒 After purchasing the plan, the invested amount "
+            "is locked until the end of the cycle."
+        ),
+
+        "plan_not_found": "❌ Plan not found.",
+
+        "insufficient": (
+            "❌ The plan cannot be purchased.\n\n"
+            "💰 Plan price: {amount:,.2f} USDT\n"
+            "💼 Available balance: {balance:,.2f} USDT\n"
+            "📥 Required amount: {required:,.2f} USDT\n\n"
+            "Deposit the required amount and try again."
+        ),
+
+        "purchase_success": (
+            "✅ Plan purchased successfully\n\n"
+            "🆔 Investment ID: #{id}\n"
+            "🔹 Plan: {plan}\n"
+            "💵 Invested amount: {amount:,.2f} USDT\n"
+            "⏱ Duration: {days} days\n"
+            "📅 Start: {start} UTC\n"
+            "📅 End: {end} UTC\n\n"
+            "📈 Target return: {profit:,.2f} USDT\n\n"
+            "🔒 The investment amount is locked until the cycle ends.\n"
+            "💼 Available balance: {balance:,.2f} USDT\n\n"
+            "⚠️ The target return is not a guarantee of market results."
+        ),
+
+        "purchase_button": "Plan purchased.",
+
+        "deposit_choose": (
+            "➕ Deposit\n\n"
+            "Choose a payment method:"
+        ),
+
+        "usdt": "🟢 USDT",
+        "usdc": "🔵 USDC",
+        "btc": "🟠 BTC",
+        "eth": "🔷 ETH",
+        "sham": "🇸🇾 Sham Cash",
+
+        "deposit_not_configured": (
+            "⚠️ {asset} has not been configured yet.\n"
+            "Please contact administration."
+        ),
+
+        "sham_deposit": (
+            "🇸🇾 Sham Cash Deposit\n\n"
+            "🆔 Receiving ID:\n{address}\n\n"
+            "After sending the amount, use:\n\n"
+            "/deposit SHAM_CASH SHAM_CASH AMOUNT REFERENCE"
+        ),
+
+        "crypto_deposit": (
+            "➕ {asset} Deposit\n\n"
+            "🌐 Network: {network}\n"
+            "📍 Address:\n{address}\n\n"
+            "After the transfer, use:\n\n"
+            "/deposit {asset} {network} AMOUNT TX_HASH\n\n"
+            "Example:\n"
+            "/deposit {asset} {network} 100 TX123456"
+        ),
+
+        "deposit_syntax": (
+            "❌ Invalid format.\n\n"
+            "For crypto:\n"
+            "/deposit USDT TRC20 100 TX_HASH\n\n"
+            "For Sham Cash:\n"
+            "/deposit SHAM_CASH SHAM_CASH 100 REFERENCE"
+        ),
+
+        "unsupported_payment": "❌ Payment method is not supported.",
+        "invalid_amount": "❌ Invalid amount.",
+
+        "deposit_created": (
+            "✅ Deposit request #{id} has been created.\n\n"
+            "⏳ The request is waiting for administrative review."
+        ),
+
+        "admin_deposit": (
+            "📥 New Deposit Request\n\n"
+            "🆔 Request: #{id}\n"
+            "👤 User: @{username}\n"
+            "Telegram ID: {user_id}\n"
+            "💳 Asset: {asset}\n"
+            "🌐 Network: {network}\n"
+            "💰 Amount: {amount:,.2f}\n"
+            "🧾 Reference / TX Hash:\n{reference}\n\n"
+            "Choose an action:"
+        ),
+
+        "approve_deposit": "✅ Approve Deposit",
+        "reject": "❌ Reject",
+
+        "deposit_approved": (
+            "✅ Deposit approved\n\n"
+            "🆔 Request: #{id}\n"
+            "💳 Asset: {asset}\n"
+            "💰 Amount: {amount:,.2f}\n\n"
+            "Your account balance has been updated."
+        ),
+
+        "deposit_rejected": (
+            "❌ Deposit request #{id} was rejected.\n\n"
+            "Contact administration if you believe this was an error."
+        ),
+
+        "balance_title": (
+            "💼 Account Balance\n\n"
+            "💵 Available balance: {balance:,.2f} USDT\n"
+            "🔒 Locked investment amount: {locked:,.2f} USDT\n\n"
+            "📊 Active investments: {count}"
+        ),
+
+        "withdraw_help": (
+            "➖ Withdraw\n\n"
+            "To create a withdrawal request send:\n\n"
+            "/withdraw USDT TRC20 100 YOUR_WALLET_ADDRESS\n\n"
+            "⚠️ Funds locked in an active investment cannot be withdrawn."
+        ),
+
+        "withdraw_syntax": (
+            "❌ Correct format:\n"
+            "/withdraw USDT TRC20 100 YOUR_WALLET_ADDRESS"
+        ),
+
+        "unsupported_withdraw": "❌ Withdrawal asset is not supported.",
+
+        "withdraw_insufficient": (
+            "❌ Available balance is insufficient.\n\n"
+            "💼 Available: {available:,.2f} USDT\n"
+            "💸 Required: {amount:,.2f} USDT\n\n"
+            "Funds locked in active investments cannot be withdrawn."
+        ),
+
+        "withdraw_created": (
+            "✅ Withdrawal request #{id} has been created.\n\n"
+            "⏳ The request is waiting for administrative review."
+        ),
+
+        "admin_withdraw": (
+            "💸 New Withdrawal Request\n\n"
+            "🆔 Request: #{id}\n"
+            "👤 User: @{username}\n"
+            "Telegram ID: {user_id}\n"
+            "💳 Asset: {asset}\n"
+            "🌐 Network: {network}\n"
+            "💰 Amount: {amount:,.2f}\n"
+            "📍 Destination wallet:\n{wallet}\n\n"
+            "Choose an action:"
+        ),
+
+        "approve_withdraw": "✅ Approve Withdrawal",
+
+        "withdraw_approved": (
+            "✅ Withdrawal request approved\n\n"
+            "🆔 Request: #{id}\n"
+            "💳 Asset: {asset}\n"
+            "💰 Amount: {amount:,.2f}\n\n"
+            "The transfer will be processed and the TX Hash "
+            "shared after completion."
+        ),
+
+        "withdraw_rejected": (
+            "❌ Withdrawal request #{id} was rejected.\n\n"
+            "No amount was deducted from your balance."
+        ),
+
+        "admin_panel": (
+            "👨‍💼 Admin Panel\n\n"
+            "📥 /pending_deposits\n"
+            "💸 /pending_withdrawals\n"
+            "💰 /user_balance TELEGRAM_ID\n"
+            "📊 /system"
+        ),
+
+        "no_pending_deposits": "📥 No pending deposit requests.",
+        "no_pending_withdrawals": "💸 No pending withdrawal requests.",
+
+        "user_balance_syntax": (
+            "Format:\n/user_balance TELEGRAM_ID"
+        ),
+
+        "invalid_id": "❌ Invalid Telegram ID.",
+
+        "admin_balance": (
+            "💰 User Balance\n\n"
+            "Telegram ID: {id}\n"
+            "💵 Available balance: {balance:,.2f} USDT\n"
+            "🔒 Invested amount: {locked:,.2f} USDT\n"
+            "📊 Active investments: {count}"
+        ),
+
+        "system": (
+            "📊 System Status\n\n"
+            "🟢 Bot is running\n"
+            "👥 Users: {users}\n"
+            "📥 Pending deposits: {deposits}\n"
+            "💸 Pending withdrawals: {withdrawals}\n"
+            "📊 Active investments: {investments}"
+        ),
+
+        "no_investments": (
+            "📊 My Investments\n\n"
+            "There are currently no registered investments."
+        ),
+
+        "my_investments": "📊 My Investments",
+
+        "active_investment": (
+            "🟢 #{id} — {plan}\n"
+            "💰 Amount: {amount:,.2f} USDT\n"
+            "🔒 Status: Active and locked\n"
+            "⏳ Approximately remaining: {days} days and {hours} hours\n"
+            "📅 End: {end} UTC\n"
+            "━━━━━━━━━━━━━━\n"
+        ),
+
+        "waiting_settlement": (
+            "🟡 #{id} — {plan}\n"
+            "⏳ Waiting for settlement...\n"
+            "━━━━━━━━━━━━━━\n"
+        ),
+
+        "completed_investment": (
+            "✅ #{id} — {plan}\n"
+            "💰 Principal: {amount:,.2f} USDT\n"
+            "📈 Target return: {profit:,.2f} USDT\n"
+            "💵 Settled total: {total:,.2f} USDT\n"
+            "🔓 Funds are now available.\n"
+            "━━━━━━━━━━━━━━\n"
+        ),
+
+        "investment_footer": (
+            "\n⚠️ The displayed return is a target and "
+            "not a guarantee of profit."
+        ),
+
+        "status_text": (
+            "🤖 System Status\n\n"
+            "🟢 The bot is running and accepting requests.\n"
+            "🟢 Finished investments are monitored and settled automatically."
+        ),
+
+        "about": (
+            "🚀 Quantum Grow\n\n"
+            "Account, deposit, withdrawal and investment management.\n\n"
+            "📅 Cycle duration: 7 days\n"
+            "📈 Target return according to plan settings.\n\n"
+            "⚠️ No profits are guaranteed. Actual results depend "
+            "on system performance, market conditions and the applicable terms."
+        ),
+
+        "investment_completed": (
+            "🎉 Investment cycle completed\n\n"
+            "🆔 Investment: #{id}\n"
+            "💰 Principal: {principal:,.2f} USDT\n"
+            "📈 Target return: {profit:,.2f} USDT\n"
+            "💵 Amount returned to balance: {total:,.2f} USDT\n\n"
+            "✅ The amount is now available in your balance."
+        ),
+
+        "unauthorized": "⛔ You are not authorized.",
+        "not_found": "❌ Request not found.",
+        "already_processed": "⚠️ This request has already been processed.",
+        "insufficient_admin": "❌ Insufficient balance.",
+    },
+}
+
+
+def tr(lang: str, key: str, **kwargs):
+    lang = lang if lang in TEXTS else "ar"
+    text = TEXTS[lang].get(key, TEXTS["ar"].get(key, key))
+
+    try:
+        return text.format(**kwargs)
+    except (KeyError, ValueError):
+        return text
+
+
+# =========================================================
+# USER / LANGUAGE
+# =========================================================
+
+async def ensure_user(message: Message):
+    uid = message.from_user.id
+    username = message.from_user.username
+
+    with SessionLocal() as db:
+        user = db.scalar(
+            select(User).where(User.telegram_id == uid)
+        )
+
+        if not user:
+            user = User(
+                telegram_id=uid,
+                username=username,
+                language="ar",
+            )
+            db.add(user)
+        else:
+            user.username = username
+
+        balance = db.scalar(
+            select(DemoBalance).where(
+                DemoBalance.telegram_id == uid
+            )
+        )
+
+        if not balance:
+            db.add(
+                DemoBalance(
+                    telegram_id=uid,
+                    balance=0.0,
+                )
+            )
+
+        db.commit()
+
+
+def get_language(user_id: int) -> str:
+    with SessionLocal() as db:
+        user = db.scalar(
+            select(User).where(
+                User.telegram_id == user_id
+            )
+        )
+
+        if user and user.language in ("ar", "en"):
+            return user.language
+
+    return "ar"
+
+
+def set_language(user_id: int, language: str):
+    if language not in ("ar", "en"):
+        return
+
+    with SessionLocal() as db:
+        user = db.scalar(
+            select(User).where(
+                User.telegram_id == user_id
+            )
+        )
+
+        if user:
+            user.language = language
+            db.commit()
+
+
+def language_keyboard():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🇸🇦 العربية",
+                    callback_data="lang:ar",
+                ),
+                InlineKeyboardButton(
+                    text="🇬🇧 English",
+                    callback_data="lang:en",
+                ),
+            ]
+        ]
+    )
+
+
+# =========================================================
+# MAIN KEYBOARD
+# =========================================================
+
+def keyboard(lang: str = "ar"):
     buttons = [
         [
-            KeyboardButton(text="💰 خطط الاستثمار"),
-            KeyboardButton(text="➕ الإيداع"),
+            KeyboardButton(text=tr(lang, "plans")),
+            KeyboardButton(text=tr(lang, "deposit")),
         ],
         [
-            KeyboardButton(text="➖ السحب"),
-            KeyboardButton(text="💼 رصيدي"),
+            KeyboardButton(text=tr(lang, "withdraw")),
+            KeyboardButton(text=tr(lang, "balance")),
         ],
         [
-            KeyboardButton(text="📊 استثماراتي"),
-            KeyboardButton(text="🤖 حالة النظام"),
+            KeyboardButton(text=tr(lang, "investments")),
+            KeyboardButton(text=tr(lang, "status")),
         ],
         [
-            KeyboardButton(text="🌐 اللغة"),
-            KeyboardButton(text="ℹ️ معلومات"),
+            KeyboardButton(text=tr(lang, "language")),
+            KeyboardButton(text=tr(lang, "info")),
         ],
     ]
 
     if settings.admin_telegram_id:
         buttons.append(
-            [KeyboardButton(text="👨‍💼 لوحة المسؤول")]
+            [KeyboardButton(text=tr(lang, "admin"))]
         )
 
     return ReplyKeyboardMarkup(
@@ -111,36 +871,40 @@ def keyboard():
     )
 
 
-def payment_keyboard(prefix: str):
+# =========================================================
+# PAYMENTS
+# =========================================================
+
+def payment_keyboard(prefix: str, lang: str):
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="🟢 USDT",
+                    text=tr(lang, "usdt"),
                     callback_data=f"{prefix}:USDT",
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="🔵 USDC",
+                    text=tr(lang, "usdc"),
                     callback_data=f"{prefix}:USDC",
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="🟠 BTC",
+                    text=tr(lang, "btc"),
                     callback_data=f"{prefix}:BTC",
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="🔷 ETH",
+                    text=tr(lang, "eth"),
                     callback_data=f"{prefix}:ETH",
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="🇸🇾 شام كاش",
+                    text=tr(lang, "sham"),
                     callback_data=f"{prefix}:SHAM_CASH",
                 )
             ],
@@ -175,39 +939,9 @@ def payment_details(asset: str):
     return data.get(asset, ("", ""))
 
 
-async def ensure_user(message: Message):
-    uid = message.from_user.id
-    username = message.from_user.username
-
-    with SessionLocal() as db:
-        user = db.scalar(
-            select(User).where(User.telegram_id == uid)
-        )
-
-        if not user:
-            db.add(
-                User(
-                    telegram_id=uid,
-                    username=username,
-                )
-            )
-
-        balance = db.scalar(
-            select(DemoBalance).where(
-                DemoBalance.telegram_id == uid
-            )
-        )
-
-        if not balance:
-            db.add(
-                DemoBalance(
-                    telegram_id=uid,
-                    balance=0.0,
-                )
-            )
-
-        db.commit()
-
+# =========================================================
+# ADMIN
+# =========================================================
 
 def is_admin(user_id: int) -> bool:
     return (
@@ -232,12 +966,6 @@ async def send_admin_message(text: str, reply_markup=None):
 # =========================================================
 
 async def settle_finished_investments():
-    """
-    Finds investments whose 7-day period has ended,
-    returns the principal + configured target profit
-    to the user's available balance, and marks them completed.
-    """
-
     now = datetime.utcnow()
 
     with SessionLocal() as db:
@@ -253,7 +981,8 @@ async def settle_finished_investments():
         for investment in investments:
             balance = db.scalar(
                 select(DemoBalance).where(
-                    DemoBalance.telegram_id == investment.telegram_id
+                    DemoBalance.telegram_id
+                    == investment.telegram_id
                 )
             )
 
@@ -293,16 +1022,19 @@ async def settle_finished_investments():
         profit,
         total,
     ) in completed_users:
+
+        lang = get_language(user_id)
+
         try:
             await bot.send_message(
                 chat_id=user_id,
-                text=(
-                    "🎉 انتهت دورة الاستثمار\n\n"
-                    f"🆔 الاستثمار: #{investment_id}\n"
-                    f"💰 أصل الاستثمار: {principal:,.2f} USDT\n"
-                    f"📈 العائد المستهدف: {profit:,.2f} USDT\n"
-                    f"💵 المبلغ المعاد للرصد: {total:,.2f} USDT\n\n"
-                    "✅ أصبح المبلغ متاحًا في رصيدك."
+                text=tr(
+                    lang,
+                    "investment_completed",
+                    id=investment_id,
+                    principal=principal,
+                    profit=profit,
+                    total=total,
                 ),
             )
         except Exception:
@@ -329,23 +1061,72 @@ async def investment_settlement_loop():
 async def start(message: Message):
     await ensure_user(message)
 
-    await message.answer(
-        "🚀 مرحبًا بك في Quantum Grow\n\n"
-        "منصة لإدارة الحسابات والإيداعات "
-        "والسحوبات والاستثمارات.\n\n"
-        "⚠️ الاستثمارات تنطوي على مخاطر، "
-        "والعائد المعروض هو عائد مستهدف وفق إعدادات الخطة "
-        "وليس ضمانًا لنتيجة السوق.\n\n"
-        "اختر من القائمة:",
-        reply_markup=keyboard(),
+    lang = get_language(
+        message.from_user.id
     )
+
+    await message.answer(
+        tr(lang, "welcome"),
+        reply_markup=keyboard(lang),
+    )
+
+
+# =========================================================
+# LANGUAGE
+# =========================================================
+
+@dp.message(
+    F.text.in_(
+        [
+            "🌐 اللغة",
+            "🌐 Language",
+        ]
+    )
+)
+async def language(message: Message):
+    lang = get_language(
+        message.from_user.id
+    )
+
+    await message.answer(
+        tr(lang, "choose_language"),
+        reply_markup=language_keyboard(),
+    )
+
+
+@dp.callback_query(F.data.startswith("lang:"))
+async def language_callback(callback):
+    language_code = callback.data.split(":", 1)[1]
+
+    if language_code not in ("ar", "en"):
+        await callback.answer()
+        return
+
+    await ensure_user(callback.message)
+
+    set_language(
+        callback.from_user.id,
+        language_code,
+    )
+
+    await callback.message.answer(
+        tr(
+            language_code,
+            "arabic_selected"
+            if language_code == "ar"
+            else "english_selected",
+        ),
+        reply_markup=keyboard(language_code),
+    )
+
+    await callback.answer()
 
 
 # =========================================================
 # INVESTMENT PLANS
 # =========================================================
 
-def plan_keyboard(plans):
+def plan_keyboard(plans, lang: str):
     rows = []
 
     for plan in plans:
@@ -366,46 +1147,62 @@ def plan_keyboard(plans):
     )
 
 
-@dp.message(F.text == "💰 خطط الاستثمار")
+@dp.message(
+    F.text.in_(
+        [
+            "💰 خطط الاستثمار",
+            "💰 Investment Plans",
+        ]
+    )
+)
 async def plans(message: Message):
     await ensure_user(message)
+
+    lang = get_language(
+        message.from_user.id
+    )
 
     with SessionLocal() as db:
         rows = db.scalars(
             select(InvestmentPlan)
-            .where(InvestmentPlan.is_active == True)
+            .where(
+                InvestmentPlan.is_active == True
+            )
             .order_by(InvestmentPlan.amount)
         ).all()
 
-    text = (
-        "💰 خطط الاستثمار\n\n"
-        "اختر الخطة التي تريد الاطلاع عليها:\n\n"
-    )
+    text = tr(lang, "choose_plan") + "\n\n"
 
     for p in rows:
-        target_profit = p.amount * p.target_rate
-        total_target = p.amount + target_profit
+        target_profit = (
+            p.amount * p.target_rate
+        )
+
+        total_target = (
+            p.amount + target_profit
+        )
 
         text += (
             f"🔹 {p.name}\n"
-            f"💵 الاستثمار: {p.amount:,.2f} USDT\n"
-            f"⏱ المدة: {p.duration_days} أيام\n"
-            f"📈 العائد المستهدف: "
+            f"{tr(lang, 'investment_amount')}: "
+            f"{p.amount:,.2f} USDT\n"
+            f"{tr(lang, 'investment_duration')}: "
+            f"{p.duration_days} days\n"
+            f"{tr(lang, 'target_return')}: "
             f"{p.target_rate * 100:.0f}%\n"
-            f"🎯 الإجمالي المستهدف: "
+            f"{tr(lang, 'target_total')}: "
             f"{total_target:,.2f} USDT\n"
             "━━━━━━━━━━━━━━\n"
         )
 
-    text += (
-        "\n⚠️ العائد المستهدف ليس ضمانًا للربح. "
-        "النتيجة الفعلية تعتمد على أداء النظام "
-        "وظروف السوق وشروط الخدمة."
-    )
+    text += tr(lang, "risk_plan")
 
     await message.answer(
         text,
-        reply_markup=plan_keyboard(rows),
+        reply_markup=plan_keyboard(
+            rows,
+            lang,
+        ),
     )
 
 
@@ -419,6 +1216,10 @@ async def plan_details_callback(callback):
         callback.data.split(":")[1]
     )
 
+    lang = get_language(
+        callback.from_user.id
+    )
+
     with SessionLocal() as db:
         plan = db.scalar(
             select(InvestmentPlan).where(
@@ -429,7 +1230,7 @@ async def plan_details_callback(callback):
 
     if not plan:
         await callback.answer(
-            "الخطة غير موجودة.",
+            tr(lang, "plan_not_found"),
             show_alert=True,
         )
         return
@@ -442,40 +1243,43 @@ async def plan_details_callback(callback):
         plan.amount + target_profit
     )
 
-    keyboard = InlineKeyboardMarkup(
+    buttons = InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="🛒 شراء الخطة من الرصيد",
+                    text=tr(lang, "buy_plan"),
                     callback_data=f"buyplan:{plan.id}",
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="🔙 العودة للخطط",
+                    text=tr(lang, "back_plans"),
                     callback_data="backplans",
                 )
             ],
         ]
     )
 
-    await callback.message.answer(
-        "📋 تفاصيل الخطة\n\n"
-        f"🔹 الخطة: {plan.name}\n"
-        f"💵 المبلغ: {plan.amount:,.2f} USDT\n"
-        f"⏱ المدة: {plan.duration_days} أيام\n"
-        f"📈 العائد المستهدف: "
+    text = (
+        f"{tr(lang, 'plan_details')}\n\n"
+        f"{tr(lang, 'plan')}: {plan.name}\n"
+        f"{tr(lang, 'amount')}: "
+        f"{plan.amount:,.2f} USDT\n"
+        f"{tr(lang, 'investment_duration')}: "
+        f"{plan.duration_days} days\n"
+        f"{tr(lang, 'target_return')}: "
         f"{plan.target_rate * 100:.0f}%\n"
-        f"💰 العائد المستهدف: "
+        f"{tr(lang, 'target_profit')}: "
         f"{target_profit:,.2f} USDT\n"
-        f"🎯 الإجمالي المستهدف: "
+        f"{tr(lang, 'target_total')}: "
         f"{total_target:,.2f} USDT\n\n"
-        "🔒 بعد شراء الخطة يصبح المبلغ المستثمر "
-        "محجوزًا حتى نهاية الدورة.\n\n"
-        "⚠️ العائد المستهدف ليس ضمانًا للربح، "
-        "والنتيجة الفعلية تعتمد على أداء النظام "
-        "وظروف السوق وشروط الخدمة.",
-        reply_markup=keyboard,
+        f"{tr(lang, 'locked_message')}\n\n"
+        f"{tr(lang, 'risk_plan').strip()}"
+    )
+
+    await callback.message.answer(
+        text,
+        reply_markup=buttons,
     )
 
     await callback.answer()
@@ -483,23 +1287,32 @@ async def plan_details_callback(callback):
 
 @dp.callback_query(F.data == "backplans")
 async def back_to_plans(callback):
+    lang = get_language(
+        callback.from_user.id
+    )
+
     with SessionLocal() as db:
         rows = db.scalars(
             select(InvestmentPlan)
-            .where(InvestmentPlan.is_active == True)
+            .where(
+                InvestmentPlan.is_active == True
+            )
             .order_by(InvestmentPlan.amount)
         ).all()
 
     await callback.message.answer(
-        "💰 اختر الخطة:",
-        reply_markup=plan_keyboard(rows),
+        tr(lang, "choose_plan"),
+        reply_markup=plan_keyboard(
+            rows,
+            lang,
+        ),
     )
 
     await callback.answer()
 
 
 # =========================================================
-# BUY PLAN FROM BALANCE
+# BUY PLAN
 # =========================================================
 
 @dp.callback_query(F.data.startswith("buyplan:"))
@@ -509,6 +1322,7 @@ async def buy_plan(callback):
     )
 
     user_id = callback.from_user.id
+    lang = get_language(user_id)
 
     with SessionLocal() as db:
         plan = db.scalar(
@@ -520,7 +1334,7 @@ async def buy_plan(callback):
 
         if not plan:
             await callback.answer(
-                "الخطة غير موجودة.",
+                tr(lang, "plan_not_found"),
                 show_alert=True,
             )
             return
@@ -541,33 +1355,42 @@ async def buy_plan(callback):
 
         if balance.balance < plan.amount:
             current = balance.balance
-            required = plan.amount - current
+            required = (
+                plan.amount - current
+            )
 
             await callback.message.answer(
-                "❌ لا يمكن شراء الخطة.\n\n"
-                f"💰 سعر الخطة: {plan.amount:,.2f} USDT\n"
-                f"💼 رصيدك المتاح: {current:,.2f} USDT\n"
-                f"📥 المبلغ المطلوب: {required:,.2f} USDT\n\n"
-                "يمكنك إيداع المبلغ المطلوب ثم شراء الخطة."
+                tr(
+                    lang,
+                    "insufficient",
+                    amount=plan.amount,
+                    balance=current,
+                    required=required,
+                )
             )
 
             await callback.answer(
-                "الرصيد غير كافٍ.",
+                "Insufficient balance."
+                if lang == "en"
+                else "الرصيد غير كافٍ.",
                 show_alert=True,
             )
             return
 
         now = datetime.utcnow()
-        ends_at = now + timedelta(
-            days=plan.duration_days
+
+        ends_at = (
+            now
+            + timedelta(
+                days=plan.duration_days
+            )
         )
 
         target_profit = (
-            plan.amount * plan.target_rate
+            plan.amount
+            * plan.target_rate
         )
 
-        # Deduct from available balance.
-        # The amount is now locked inside the investment.
         balance.balance -= plan.amount
 
         investment = Investment(
@@ -587,26 +1410,26 @@ async def buy_plan(callback):
         remaining_balance = balance.balance
 
     await callback.message.answer(
-        "✅ تم شراء الخطة بنجاح\n\n"
-        f"🆔 رقم الاستثمار: #{investment_id}\n"
-        f"🔹 الخطة: {plan.name}\n"
-        f"💵 المبلغ المستثمر: "
-        f"{plan.amount:,.2f} USDT\n"
-        f"⏱ المدة: {plan.duration_days} أيام\n"
-        f"📅 تاريخ البداية: "
-        f"{now.strftime('%Y-%m-%d %H:%M')} UTC\n"
-        f"📅 تاريخ الانتهاء: "
-        f"{ends_at.strftime('%Y-%m-%d %H:%M')} UTC\n\n"
-        f"📈 العائد المستهدف: "
-        f"{target_profit:,.2f} USDT\n\n"
-        "🔒 تم حجز مبلغ الاستثمار حتى انتهاء الدورة.\n"
-        "💼 رصيدك المتاح الآن: "
-        f"{remaining_balance:,.2f} USDT\n\n"
-        "⚠️ العائد المستهدف ليس ضمانًا لنتيجة السوق."
+        tr(
+            lang,
+            "purchase_success",
+            id=investment_id,
+            plan=plan.name,
+            amount=plan.amount,
+            days=plan.duration_days,
+            start=now.strftime(
+                "%Y-%m-%d %H:%M"
+            ),
+            end=ends_at.strftime(
+                "%Y-%m-%d %H:%M"
+            ),
+            profit=target_profit,
+            balance=remaining_balance,
+        )
     )
 
     await callback.answer(
-        "تم شراء الخطة."
+        tr(lang, "purchase_button")
     )
 
 
@@ -614,47 +1437,72 @@ async def buy_plan(callback):
 # DEPOSIT
 # =========================================================
 
-@dp.message(F.text == "➕ الإيداع")
+@dp.message(
+    F.text.in_(
+        [
+            "➕ الإيداع",
+            "➕ Deposit",
+        ]
+    )
+)
 async def deposit(message: Message):
     await ensure_user(message)
 
+    lang = get_language(
+        message.from_user.id
+    )
+
     await message.answer(
-        "➕ الإيداع\n\n"
-        "اختر طريقة الدفع:",
-        reply_markup=payment_keyboard("dep"),
+        tr(lang, "deposit_choose"),
+        reply_markup=payment_keyboard(
+            "dep",
+            lang,
+        ),
     )
 
 
 @dp.callback_query(F.data.startswith("dep:"))
 async def deposit_currency(callback):
-    asset = callback.data.split(":", 1)[1]
+    asset = callback.data.split(
+        ":",
+        1,
+    )[1]
 
-    network, address = payment_details(asset)
+    lang = get_language(
+        callback.from_user.id
+    )
+
+    network, address = payment_details(
+        asset
+    )
 
     if not address:
         await callback.message.answer(
-            f"⚠️ لم يتم إعداد {asset} بعد.\n"
-            "تواصل مع الإدارة."
+            tr(
+                lang,
+                "deposit_not_configured",
+                asset=asset,
+            )
         )
 
     elif asset == "SHAM_CASH":
         await callback.message.answer(
-            "🇸🇾 إيداع عبر شام كاش\n\n"
-            f"🆔 معرّف الاستلام:\n{address}\n\n"
-            "بعد إرسال المبلغ، استخدم الأمر التالي "
-            "لتسجيل العملية:\n\n"
-            "/deposit SHAM_CASH SHAM_CASH المبلغ رقم_المرجع"
+            tr(
+                lang,
+                "sham_deposit",
+                address=address,
+            )
         )
 
     else:
         await callback.message.answer(
-            f"➕ إيداع {asset}\n\n"
-            f"🌐 الشبكة: {network}\n"
-            f"📍 العنوان:\n{address}\n\n"
-            "بعد التحويل استخدم الأمر التالي:\n\n"
-            f"/deposit {asset} {network} المبلغ TX_HASH\n\n"
-            "مثال:\n"
-            f"/deposit {asset} {network} 100 TX123456"
+            tr(
+                lang,
+                "crypto_deposit",
+                asset=asset,
+                network=network,
+                address=address,
+            )
         )
 
     await callback.answer()
@@ -662,15 +1510,17 @@ async def deposit_currency(callback):
 
 @dp.message(Command("deposit"))
 async def deposit_command(message: Message):
-    parts = message.text.split(maxsplit=4)
+    lang = get_language(
+        message.from_user.id
+    )
+
+    parts = message.text.split(
+        maxsplit=4
+    )
 
     if len(parts) != 5:
         await message.answer(
-            "❌ الصيغة غير صحيحة.\n\n"
-            "للعملات الرقمية:\n"
-            "/deposit USDT TRC20 100 TX_HASH\n\n"
-            "لشام كاش:\n"
-            "/deposit SHAM_CASH SHAM_CASH 100 REFERENCE"
+            tr(lang, "deposit_syntax")
         )
         return
 
@@ -679,15 +1529,17 @@ async def deposit_command(message: Message):
     asset = asset.upper()
     network = network.upper()
 
-    if asset not in [
+    allowed_assets = [
         "USDT",
         "USDC",
         "BTC",
         "ETH",
         "SHAM_CASH",
-    ]:
+    ]
+
+    if asset not in allowed_assets:
         await message.answer(
-            "❌ طريقة الدفع غير مدعومة."
+            tr(lang, "unsupported_payment")
         )
         return
 
@@ -699,7 +1551,7 @@ async def deposit_command(message: Message):
 
     except ValueError:
         await message.answer(
-            "❌ المبلغ غير صحيح."
+            tr(lang, "invalid_amount")
         )
         return
 
@@ -724,12 +1576,22 @@ async def deposit_command(message: Message):
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="✅ قبول الإيداع",
-                    callback_data=f"depapprove:{request_id}",
+                    text=tr(
+                        "ar",
+                        "approve_deposit",
+                    ),
+                    callback_data=(
+                        f"depapprove:{request_id}"
+                    ),
                 ),
                 InlineKeyboardButton(
-                    text="❌ رفض",
-                    callback_data=f"depreject:{request_id}",
+                    text=tr(
+                        "ar",
+                        "reject",
+                    ),
+                    callback_data=(
+                        f"depreject:{request_id}"
+                    ),
                 ),
             ]
         ]
@@ -737,19 +1599,19 @@ async def deposit_command(message: Message):
 
     username = (
         message.from_user.username
-        or "بدون اسم"
+        or "no_username"
     )
 
-    admin_text = (
-        "📥 طلب إيداع جديد\n\n"
-        f"🆔 الطلب: #{request_id}\n"
-        f"👤 المستخدم: @{username}\n"
-        f"Telegram ID: {message.from_user.id}\n"
-        f"💳 الطريقة: {asset}\n"
-        f"🌐 الشبكة: {network}\n"
-        f"💰 المبلغ: {amount:,.2f}\n"
-        f"🧾 المرجع / TX Hash:\n{reference}\n\n"
-        "اختر الإجراء:"
+    admin_text = tr(
+        "ar",
+        "admin_deposit",
+        id=request_id,
+        username=username,
+        user_id=message.from_user.id,
+        asset=asset,
+        network=network,
+        amount=amount,
+        reference=reference,
     )
 
     await send_admin_message(
@@ -758,20 +1620,27 @@ async def deposit_command(message: Message):
     )
 
     await message.answer(
-        f"✅ تم تسجيل طلب الإيداع #{request_id}.\n\n"
-        "⏳ الطلب بانتظار مراجعة الإدارة."
+        tr(
+            lang,
+            "deposit_created",
+            id=request_id,
+        )
     )
 
 
 # =========================================================
-# ADMIN DEPOSIT ACTIONS
+# ADMIN DEPOSIT
 # =========================================================
 
-@dp.callback_query(F.data.startswith("depapprove:"))
+@dp.callback_query(
+    F.data.startswith("depapprove:")
+)
 async def approve_deposit(callback):
-    if not is_admin(callback.from_user.id):
+    if not is_admin(
+        callback.from_user.id
+    ):
         await callback.answer(
-            "⛔ غير مصرح لك.",
+            tr("ar", "unauthorized"),
             show_alert=True,
         )
         return
@@ -783,27 +1652,29 @@ async def approve_deposit(callback):
     with SessionLocal() as db:
         req = db.scalar(
             select(DepositRequest).where(
-                DepositRequest.id == request_id
+                DepositRequest.id
+                == request_id
             )
         )
 
         if not req:
             await callback.answer(
-                "الطلب غير موجود.",
+                tr("ar", "not_found"),
                 show_alert=True,
             )
             return
 
         if req.status != "pending":
             await callback.answer(
-                "تمت معالجة هذا الطلب مسبقًا.",
+                tr("ar", "already_processed"),
                 show_alert=True,
             )
             return
 
         bal = db.scalar(
             select(DemoBalance).where(
-                DemoBalance.telegram_id == req.telegram_id
+                DemoBalance.telegram_id
+                == req.telegram_id
             )
         )
 
@@ -823,14 +1694,16 @@ async def approve_deposit(callback):
         amount = req.amount
         asset = req.asset
 
+    user_lang = get_language(user_id)
+
     await bot.send_message(
         chat_id=user_id,
-        text=(
-            "✅ تم قبول الإيداع\n\n"
-            f"🆔 الطلب: #{request_id}\n"
-            f"💳 العملة: {asset}\n"
-            f"💰 المبلغ: {amount:,.2f}\n\n"
-            "تم تحديث رصيد حسابك."
+        text=tr(
+            user_lang,
+            "deposit_approved",
+            id=request_id,
+            asset=asset,
+            amount=amount,
         ),
     )
 
@@ -840,15 +1713,19 @@ async def approve_deposit(callback):
     )
 
     await callback.answer(
-        "تم قبول الإيداع."
+        "Deposit approved."
     )
 
 
-@dp.callback_query(F.data.startswith("depreject:"))
+@dp.callback_query(
+    F.data.startswith("depreject:")
+)
 async def reject_deposit(callback):
-    if not is_admin(callback.from_user.id):
+    if not is_admin(
+        callback.from_user.id
+    ):
         await callback.answer(
-            "⛔ غير مصرح لك.",
+            tr("ar", "unauthorized"),
             show_alert=True,
         )
         return
@@ -860,20 +1737,21 @@ async def reject_deposit(callback):
     with SessionLocal() as db:
         req = db.scalar(
             select(DepositRequest).where(
-                DepositRequest.id == request_id
+                DepositRequest.id
+                == request_id
             )
         )
 
         if not req:
             await callback.answer(
-                "الطلب غير موجود.",
+                tr("ar", "not_found"),
                 show_alert=True,
             )
             return
 
         if req.status != "pending":
             await callback.answer(
-                "تمت معالجة هذا الطلب مسبقًا.",
+                tr("ar", "already_processed"),
                 show_alert=True,
             )
             return
@@ -883,11 +1761,14 @@ async def reject_deposit(callback):
 
         user_id = req.telegram_id
 
+    user_lang = get_language(user_id)
+
     await bot.send_message(
         chat_id=user_id,
-        text=(
-            f"❌ تم رفض طلب الإيداع #{request_id}.\n\n"
-            "يرجى التواصل مع الإدارة إذا كنت تعتقد أن هناك خطأ."
+        text=tr(
+            user_lang,
+            "deposit_rejected",
+            id=request_id,
         ),
     )
 
@@ -897,7 +1778,7 @@ async def reject_deposit(callback):
     )
 
     await callback.answer(
-        "تم رفض الإيداع."
+        "Deposit rejected."
     )
 
 
@@ -905,21 +1786,35 @@ async def reject_deposit(callback):
 # BALANCE
 # =========================================================
 
-@dp.message(F.text == "💼 رصيدي")
+@dp.message(
+    F.text.in_(
+        [
+            "💼 رصيدي",
+            "💼 My Balance",
+        ]
+    )
+)
 async def balance(message: Message):
     await ensure_user(message)
+
+    lang = get_language(
+        message.from_user.id
+    )
 
     with SessionLocal() as db:
         bal = db.scalar(
             select(DemoBalance).where(
-                DemoBalance.telegram_id == message.from_user.id
+                DemoBalance.telegram_id
+                == message.from_user.id
             )
         )
 
         active_investments = db.scalars(
             select(Investment).where(
-                Investment.telegram_id == message.from_user.id,
-                Investment.status == "active",
+                Investment.telegram_id
+                == message.from_user.id,
+                Investment.status
+                == "active",
             )
         ).all()
 
@@ -933,13 +1828,13 @@ async def balance(message: Message):
     )
 
     await message.answer(
-        "💼 رصيد الحساب\n\n"
-        f"💵 الرصيد المتاح: "
-        f"{current_balance:,.2f} USDT\n"
-        f"🔒 المبلغ المستثمر والمحجوز: "
-        f"{locked:,.2f} USDT\n\n"
-        f"📊 الاستثمارات النشطة: "
-        f"{len(active_investments)}"
+        tr(
+            lang,
+            "balance_title",
+            balance=current_balance,
+            locked=locked,
+            count=len(active_investments),
+        )
     )
 
 
@@ -947,27 +1842,39 @@ async def balance(message: Message):
 # WITHDRAWAL
 # =========================================================
 
-@dp.message(F.text == "➖ السحب")
+@dp.message(
+    F.text.in_(
+        [
+            "➖ السحب",
+            "➖ Withdraw",
+        ]
+    )
+)
 async def withdrawal(message: Message):
     await ensure_user(message)
 
+    lang = get_language(
+        message.from_user.id
+    )
+
     await message.answer(
-        "➖ السحب\n\n"
-        "لإنشاء طلب سحب أرسل:\n\n"
-        "/withdraw USDT TRC20 100 YOUR_WALLET_ADDRESS\n\n"
-        "⚠️ لا يمكن سحب الأموال المحجوزة داخل "
-        "استثمار نشط."
+        tr(lang, "withdraw_help")
     )
 
 
 @dp.message(Command("withdraw"))
 async def withdraw_command(message: Message):
-    parts = message.text.split(maxsplit=4)
+    lang = get_language(
+        message.from_user.id
+    )
+
+    parts = message.text.split(
+        maxsplit=4
+    )
 
     if len(parts) != 5:
         await message.answer(
-            "❌ الصيغة الصحيحة:\n"
-            "/withdraw USDT TRC20 100 YOUR_WALLET_ADDRESS"
+            tr(lang, "withdraw_syntax")
         )
         return
 
@@ -985,7 +1892,10 @@ async def withdraw_command(message: Message):
 
     if asset not in allowed_assets:
         await message.answer(
-            "❌ عملة السحب غير مدعومة."
+            tr(
+                lang,
+                "unsupported_withdraw",
+            )
         )
         return
 
@@ -997,7 +1907,7 @@ async def withdraw_command(message: Message):
 
     except ValueError:
         await message.answer(
-            "❌ المبلغ غير صحيح."
+            tr(lang, "invalid_amount")
         )
         return
 
@@ -1006,7 +1916,8 @@ async def withdraw_command(message: Message):
     with SessionLocal() as db:
         bal = db.scalar(
             select(DemoBalance).where(
-                DemoBalance.telegram_id == message.from_user.id
+                DemoBalance.telegram_id
+                == message.from_user.id
             )
         )
 
@@ -1016,11 +1927,12 @@ async def withdraw_command(message: Message):
             )
 
             await message.answer(
-                "❌ الرصيد المتاح غير كافٍ.\n\n"
-                f"💼 المتاح: {available:,.2f} USDT\n"
-                f"💸 المطلوب: {amount:,.2f} USDT\n\n"
-                "الأموال الموجودة داخل الاستثمارات "
-                "النشطة غير قابلة للسحب."
+                tr(
+                    lang,
+                    "withdraw_insufficient",
+                    available=available,
+                    amount=amount,
+                )
             )
             return
 
@@ -1042,12 +1954,22 @@ async def withdraw_command(message: Message):
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="✅ قبول السحب",
-                    callback_data=f"withapprove:{request_id}",
+                    text=tr(
+                        "ar",
+                        "approve_withdraw",
+                    ),
+                    callback_data=(
+                        f"withapprove:{request_id}"
+                    ),
                 ),
                 InlineKeyboardButton(
-                    text="❌ رفض",
-                    callback_data=f"withreject:{request_id}",
+                    text=tr(
+                        "ar",
+                        "reject",
+                    ),
+                    callback_data=(
+                        f"withreject:{request_id}"
+                    ),
                 ),
             ]
         ]
@@ -1055,19 +1977,19 @@ async def withdraw_command(message: Message):
 
     username = (
         message.from_user.username
-        or "بدون اسم"
+        or "no_username"
     )
 
-    admin_text = (
-        "💸 طلب سحب جديد\n\n"
-        f"🆔 الطلب: #{request_id}\n"
-        f"👤 المستخدم: @{username}\n"
-        f"Telegram ID: {message.from_user.id}\n"
-        f"💳 العملة: {asset}\n"
-        f"🌐 الشبكة: {network}\n"
-        f"💰 المبلغ: {amount:,.2f}\n"
-        f"📍 محفظة المستلم:\n{wallet}\n\n"
-        "اختر الإجراء:"
+    admin_text = tr(
+        "ar",
+        "admin_withdraw",
+        id=request_id,
+        username=username,
+        user_id=message.from_user.id,
+        asset=asset,
+        network=network,
+        amount=amount,
+        wallet=wallet,
     )
 
     await send_admin_message(
@@ -1076,20 +1998,27 @@ async def withdraw_command(message: Message):
     )
 
     await message.answer(
-        f"✅ تم إنشاء طلب السحب #{request_id}.\n\n"
-        "⏳ الطلب بانتظار مراجعة الإدارة."
+        tr(
+            lang,
+            "withdraw_created",
+            id=request_id,
+        )
     )
 
 
 # =========================================================
-# ADMIN WITHDRAWAL ACTIONS
+# ADMIN WITHDRAWAL
 # =========================================================
 
-@dp.callback_query(F.data.startswith("withapprove:"))
+@dp.callback_query(
+    F.data.startswith("withapprove:")
+)
 async def approve_withdrawal(callback):
-    if not is_admin(callback.from_user.id):
+    if not is_admin(
+        callback.from_user.id
+    ):
         await callback.answer(
-            "⛔ غير مصرح لك.",
+            tr("ar", "unauthorized"),
             show_alert=True,
         )
         return
@@ -1101,33 +2030,35 @@ async def approve_withdrawal(callback):
     with SessionLocal() as db:
         req = db.scalar(
             select(WithdrawalRequest).where(
-                WithdrawalRequest.id == request_id
+                WithdrawalRequest.id
+                == request_id
             )
         )
 
         if not req:
             await callback.answer(
-                "الطلب غير موجود.",
+                tr("ar", "not_found"),
                 show_alert=True,
             )
             return
 
         if req.status != "pending":
             await callback.answer(
-                "تمت معالجة هذا الطلب مسبقًا.",
+                tr("ar", "already_processed"),
                 show_alert=True,
             )
             return
 
         bal = db.scalar(
             select(DemoBalance).where(
-                DemoBalance.telegram_id == req.telegram_id
+                DemoBalance.telegram_id
+                == req.telegram_id
             )
         )
 
         if not bal or bal.balance < req.amount:
             await callback.answer(
-                "الرصيد غير كافٍ.",
+                tr("ar", "insufficient_admin"),
                 show_alert=True,
             )
             return
@@ -1141,15 +2072,16 @@ async def approve_withdrawal(callback):
         amount = req.amount
         asset = req.asset
 
+    user_lang = get_language(user_id)
+
     await bot.send_message(
         chat_id=user_id,
-        text=(
-            "✅ تمت الموافقة على طلب السحب\n\n"
-            f"🆔 الطلب: #{request_id}\n"
-            f"💳 العملة: {asset}\n"
-            f"💰 المبلغ: {amount:,.2f}\n\n"
-            "سيتم تنفيذ التحويل ومشاركة TX Hash "
-            "بعد إتمام العملية."
+        text=tr(
+            user_lang,
+            "withdraw_approved",
+            id=request_id,
+            asset=asset,
+            amount=amount,
         ),
     )
 
@@ -1159,15 +2091,19 @@ async def approve_withdrawal(callback):
     )
 
     await callback.answer(
-        "تمت الموافقة على السحب."
+        "Withdrawal approved."
     )
 
 
-@dp.callback_query(F.data.startswith("withreject:"))
+@dp.callback_query(
+    F.data.startswith("withreject:")
+)
 async def reject_withdrawal(callback):
-    if not is_admin(callback.from_user.id):
+    if not is_admin(
+        callback.from_user.id
+    ):
         await callback.answer(
-            "⛔ غير مصرح لك.",
+            tr("ar", "unauthorized"),
             show_alert=True,
         )
         return
@@ -1179,20 +2115,21 @@ async def reject_withdrawal(callback):
     with SessionLocal() as db:
         req = db.scalar(
             select(WithdrawalRequest).where(
-                WithdrawalRequest.id == request_id
+                WithdrawalRequest.id
+                == request_id
             )
         )
 
         if not req:
             await callback.answer(
-                "الطلب غير موجود.",
+                tr("ar", "not_found"),
                 show_alert=True,
             )
             return
 
         if req.status != "pending":
             await callback.answer(
-                "تمت معالجة هذا الطلب مسبقًا.",
+                tr("ar", "already_processed"),
                 show_alert=True,
             )
             return
@@ -1202,11 +2139,14 @@ async def reject_withdrawal(callback):
 
         user_id = req.telegram_id
 
+    user_lang = get_language(user_id)
+
     await bot.send_message(
         chat_id=user_id,
-        text=(
-            f"❌ تم رفض طلب السحب #{request_id}.\n\n"
-            "لم يتم خصم أي مبلغ من رصيدك."
+        text=tr(
+            user_lang,
+            "withdraw_rejected",
+            id=request_id,
         ),
     )
 
@@ -1216,7 +2156,7 @@ async def reject_withdrawal(callback):
     )
 
     await callback.answer(
-        "تم رفض السحب."
+        "Withdrawal rejected."
     )
 
 
@@ -1226,43 +2166,58 @@ async def reject_withdrawal(callback):
 
 @dp.message(Command("admin"))
 async def admin_command(message: Message):
-    if not is_admin(message.from_user.id):
+    if not is_admin(
+        message.from_user.id
+    ):
         await message.answer(
-            "⛔ غير مصرح لك."
+            tr(
+                get_language(
+                    message.from_user.id
+                ),
+                "unauthorized",
+            )
         )
         return
 
     await message.answer(
-        "👨‍💼 لوحة المسؤول\n\n"
-        "📥 /pending_deposits\n"
-        "💸 /pending_withdrawals\n"
-        "💰 /user_balance TELEGRAM_ID\n"
-        "📊 /system"
+        tr("ar", "admin_panel")
     )
 
 
-@dp.message(F.text == "👨‍💼 لوحة المسؤول")
+@dp.message(
+    F.text.in_(
+        [
+            "👨‍💼 لوحة المسؤول",
+            "👨‍💼 Admin Panel",
+        ]
+    )
+)
 async def admin_button(message: Message):
-    if not is_admin(message.from_user.id):
+    if not is_admin(
+        message.from_user.id
+    ):
         await message.answer(
-            "⛔ غير مصرح لك."
+            tr(
+                get_language(
+                    message.from_user.id
+                ),
+                "unauthorized",
+            )
         )
         return
 
     await message.answer(
-        "👨‍💼 لوحة المسؤول\n\n"
-        "📥 /pending_deposits\n"
-        "💸 /pending_withdrawals\n"
-        "💰 /user_balance TELEGRAM_ID\n"
-        "📊 /system"
+        tr("ar", "admin_panel")
     )
 
 
 @dp.message(Command("pending_deposits"))
 async def pending_deposits(message: Message):
-    if not is_admin(message.from_user.id):
+    if not is_admin(
+        message.from_user.id
+    ):
         await message.answer(
-            "⛔ غير مصرح لك."
+            tr("ar", "unauthorized")
         )
         return
 
@@ -1270,18 +2225,28 @@ async def pending_deposits(message: Message):
         rows = db.scalars(
             select(DepositRequest)
             .where(
-                DepositRequest.status == "pending"
+                DepositRequest.status
+                == "pending"
             )
-            .order_by(DepositRequest.id.desc())
+            .order_by(
+                DepositRequest.id.desc()
+            )
         ).all()
 
     if not rows:
         await message.answer(
-            "📥 لا توجد طلبات إيداع معلقة."
+            tr(
+                get_language(
+                    message.from_user.id
+                ),
+                "no_pending_deposits",
+            )
         )
         return
 
-    text = "📥 طلبات الإيداع المعلقة\n\n"
+    text = (
+        "📥 طلبات الإيداع المعلقة\n\n"
+    )
 
     for req in rows:
         text += (
@@ -1298,9 +2263,11 @@ async def pending_deposits(message: Message):
 
 @dp.message(Command("pending_withdrawals"))
 async def pending_withdrawals(message: Message):
-    if not is_admin(message.from_user.id):
+    if not is_admin(
+        message.from_user.id
+    ):
         await message.answer(
-            "⛔ غير مصرح لك."
+            tr("ar", "unauthorized")
         )
         return
 
@@ -1308,18 +2275,28 @@ async def pending_withdrawals(message: Message):
         rows = db.scalars(
             select(WithdrawalRequest)
             .where(
-                WithdrawalRequest.status == "pending"
+                WithdrawalRequest.status
+                == "pending"
             )
-            .order_by(WithdrawalRequest.id.desc())
+            .order_by(
+                WithdrawalRequest.id.desc()
+            )
         ).all()
 
     if not rows:
         await message.answer(
-            "💸 لا توجد طلبات سحب معلقة."
+            tr(
+                get_language(
+                    message.from_user.id
+                ),
+                "no_pending_withdrawals",
+            )
         )
         return
 
-    text = "💸 طلبات السحب المعلقة\n\n"
+    text = (
+        "💸 طلبات السحب المعلقة\n\n"
+    )
 
     for req in rows:
         text += (
@@ -1336,9 +2313,11 @@ async def pending_withdrawals(message: Message):
 
 @dp.message(Command("user_balance"))
 async def user_balance(message: Message):
-    if not is_admin(message.from_user.id):
+    if not is_admin(
+        message.from_user.id
+    ):
         await message.answer(
-            "⛔ غير مصرح لك."
+            tr("ar", "unauthorized")
         )
         return
 
@@ -1346,7 +2325,10 @@ async def user_balance(message: Message):
 
     if len(parts) != 2:
         await message.answer(
-            "الصيغة:\n/user_balance TELEGRAM_ID"
+            tr(
+                "ar",
+                "user_balance_syntax",
+            )
         )
         return
 
@@ -1354,21 +2336,24 @@ async def user_balance(message: Message):
         telegram_id = int(parts[1])
     except ValueError:
         await message.answer(
-            "❌ Telegram ID غير صحيح."
+            tr("ar", "invalid_id")
         )
         return
 
     with SessionLocal() as db:
         bal = db.scalar(
             select(DemoBalance).where(
-                DemoBalance.telegram_id == telegram_id
+                DemoBalance.telegram_id
+                == telegram_id
             )
         )
 
         investments = db.scalars(
             select(Investment).where(
-                Investment.telegram_id == telegram_id,
-                Investment.status == "active",
+                Investment.telegram_id
+                == telegram_id,
+                Investment.status
+                == "active",
             )
         ).all()
 
@@ -1382,37 +2367,39 @@ async def user_balance(message: Message):
     )
 
     await message.answer(
-        f"💰 رصيد المستخدم\n\n"
-        f"Telegram ID: {telegram_id}\n"
-        f"💵 الرصيد المتاح: "
-        f"{amount:,.2f} USDT\n"
-        f"🔒 المبلغ المستثمر: "
-        f"{locked:,.2f} USDT\n"
-        f"📊 الاستثمارات النشطة: "
-        f"{len(investments)}"
+        tr(
+            "ar",
+            "admin_balance",
+            id=telegram_id,
+            balance=amount,
+            locked=locked,
+            count=len(investments),
+        )
     )
 
 
 @dp.message(Command("system"))
 async def admin_system(message: Message):
-    if not is_admin(message.from_user.id):
+    if not is_admin(
+        message.from_user.id
+    ):
         await message.answer(
-            "⛔ غير مصرح لك."
+            tr("ar", "unauthorized")
         )
         return
 
     with SessionLocal() as db:
         deposits = db.scalars(
-            select(DepositRequest)
-            .where(
-                DepositRequest.status == "pending"
+            select(DepositRequest).where(
+                DepositRequest.status
+                == "pending"
             )
         ).all()
 
         withdrawals = db.scalars(
-            select(WithdrawalRequest)
-            .where(
-                WithdrawalRequest.status == "pending"
+            select(WithdrawalRequest).where(
+                WithdrawalRequest.status
+                == "pending"
             )
         ).all()
 
@@ -1422,18 +2409,20 @@ async def admin_system(message: Message):
 
         active_investments = db.scalars(
             select(Investment).where(
-                Investment.status == "active"
+                Investment.status
+                == "active"
             )
         ).all()
 
     await message.answer(
-        "📊 حالة النظام\n\n"
-        "🟢 البوت يعمل\n"
-        f"👥 المستخدمون: {len(users)}\n"
-        f"📥 إيداعات معلقة: {len(deposits)}\n"
-        f"💸 سحوبات معلقة: {len(withdrawals)}\n"
-        f"📊 استثمارات نشطة: "
-        f"{len(active_investments)}"
+        tr(
+            "ar",
+            "system",
+            users=len(users),
+            deposits=len(deposits),
+            withdrawals=len(withdrawals),
+            investments=len(active_investments),
+        )
     )
 
 
@@ -1441,9 +2430,20 @@ async def admin_system(message: Message):
 # USER INVESTMENTS
 # =========================================================
 
-@dp.message(F.text == "📊 استثماراتي")
+@dp.message(
+    F.text.in_(
+        [
+            "📊 استثماراتي",
+            "📊 My Investments",
+        ]
+    )
+)
 async def investments(message: Message):
     await ensure_user(message)
+
+    lang = get_language(
+        message.from_user.id
+    )
 
     await settle_finished_investments()
 
@@ -1454,7 +2454,9 @@ async def investments(message: Message):
                 Investment.telegram_id
                 == message.from_user.id
             )
-            .order_by(Investment.id.desc())
+            .order_by(
+                Investment.id.desc()
+            )
         ).all()
 
         plans_map = {
@@ -1466,17 +2468,21 @@ async def investments(message: Message):
 
     if not rows:
         await message.answer(
-            "📊 استثماراتي\n\n"
-            "لا توجد استثمارات مسجلة حاليًا."
+            tr(lang, "no_investments")
         )
         return
 
-    text = "📊 استثماراتي\n\n"
+    text = (
+        tr(lang, "my_investments")
+        + "\n\n"
+    )
 
     now = datetime.utcnow()
 
     for inv in rows:
-        plan = plans_map.get(inv.plan_id)
+        plan = plans_map.get(
+            inv.plan_id
+        )
 
         plan_name = (
             plan.name
@@ -1485,30 +2491,36 @@ async def investments(message: Message):
         )
 
         if inv.status == "active":
-            remaining = inv.ends_at - now
+            remaining = (
+                inv.ends_at - now
+            )
 
             if remaining.total_seconds() > 0:
                 days = remaining.days
                 hours = (
-                    remaining.seconds // 3600
+                    remaining.seconds
+                    // 3600
                 )
 
-                text += (
-                    f"🟢 #{inv.id} — {plan_name}\n"
-                    f"💰 المبلغ: "
-                    f"{inv.amount:,.2f} USDT\n"
-                    f"🔒 الحالة: نشط ومحجوز\n"
-                    f"⏳ المتبقي تقريبًا: "
-                    f"{days} يوم و {hours} ساعة\n"
-                    f"📅 الانتهاء: "
-                    f"{inv.ends_at.strftime('%Y-%m-%d %H:%M')} UTC\n"
-                    "━━━━━━━━━━━━━━\n"
+                text += tr(
+                    lang,
+                    "active_investment",
+                    id=inv.id,
+                    plan=plan_name,
+                    amount=inv.amount,
+                    days=days,
+                    hours=hours,
+                    end=inv.ends_at.strftime(
+                        "%Y-%m-%d %H:%M"
+                    ),
                 )
+
             else:
-                text += (
-                    f"🟡 #{inv.id} — {plan_name}\n"
-                    "⏳ بانتظار التسوية...\n"
-                    "━━━━━━━━━━━━━━\n"
+                text += tr(
+                    lang,
+                    "waiting_settlement",
+                    id=inv.id,
+                    plan=plan_name,
                 )
 
         elif inv.status == "completed":
@@ -1517,62 +2529,61 @@ async def investments(message: Message):
                 + inv.target_profit
             )
 
-            text += (
-                f"✅ #{inv.id} — {plan_name}\n"
-                f"💰 الأصل: "
-                f"{inv.amount:,.2f} USDT\n"
-                f"📈 العائد المستهدف: "
-                f"{inv.target_profit:,.2f} USDT\n"
-                f"💵 الإجمالي المسوى: "
-                f"{total:,.2f} USDT\n"
-                "🔓 أصبحت الأموال متاحة.\n"
-                "━━━━━━━━━━━━━━\n"
+            text += tr(
+                lang,
+                "completed_investment",
+                id=inv.id,
+                plan=plan_name,
+                amount=inv.amount,
+                profit=inv.target_profit,
+                total=total,
             )
 
-    text += (
-        "\n⚠️ العائد المذكور هو عائد مستهدف "
-        "وليس ضمانًا للربح."
+    text += tr(
+        lang,
+        "investment_footer",
     )
 
     await message.answer(text)
 
 
 # =========================================================
-# STATUS / LANGUAGE / INFO
+# STATUS / INFO
 # =========================================================
 
-@dp.message(F.text == "🤖 حالة النظام")
+@dp.message(
+    F.text.in_(
+        [
+            "🤖 حالة النظام",
+            "🤖 System Status",
+        ]
+    )
+)
 async def status(message: Message):
+    lang = get_language(
+        message.from_user.id
+    )
+
     await message.answer(
-        "🤖 حالة النظام\n\n"
-        "🟢 البوت يعمل ويستقبل الطلبات.\n"
-        "🟢 تتم مراقبة الاستثمارات المنتهية "
-        "وتسويتها تلقائيًا."
+        tr(lang, "status_text")
     )
 
 
-@dp.message(F.text == "🌐 اللغة")
-async def language(message: Message):
-    await message.answer(
-        "🌐 اللغة\n\n"
-        "🇸🇦 العربية\n"
-        "🇬🇧 English\n\n"
-        "واجهة English الكاملة نضيفها "
-        "بعد استقرار النسخة العربية."
+@dp.message(
+    F.text.in_(
+        [
+            "ℹ️ معلومات",
+            "ℹ️ Information",
+        ]
     )
-
-
-@dp.message(F.text == "ℹ️ معلومات")
+)
 async def about(message: Message):
+    lang = get_language(
+        message.from_user.id
+    )
+
     await message.answer(
-        "🚀 Quantum Grow\n\n"
-        "إدارة الحسابات والإيداعات والسحوبات "
-        "والاستثمارات.\n\n"
-        "📅 مدة الدورة: 7 أيام\n"
-        "📈 العائد المستهدف حسب إعدادات الخطة.\n\n"
-        "⚠️ لا توجد أرباح مضمونة، والنتيجة الفعلية "
-        "تعتمد على أداء النظام وظروف السوق "
-        "وشروط الخدمة."
+        tr(lang, "about")
     )
 
 
@@ -1581,7 +2592,9 @@ async def about(message: Message):
 # =========================================================
 
 async def main():
-    print("Quantum Grow bot is starting...")
+    print(
+        "Quantum Grow bot is starting..."
+    )
 
     settlement_task = asyncio.create_task(
         investment_settlement_loop()
