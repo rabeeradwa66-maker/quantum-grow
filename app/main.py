@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime, timedelta
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command, CommandStart
@@ -16,6 +17,7 @@ from .db import Base, SessionLocal, engine
 from .models import (
     DemoBalance,
     DepositRequest,
+    Investment,
     InvestmentPlan,
     User,
     WithdrawalRequest,
@@ -29,27 +31,31 @@ dp = Dispatcher()
 
 
 PLANS = [
-    (1, "Starter", 10, 7, 0.0),
-    (2, "Basic", 25, 7, 0.0),
-    (3, "Bronze", 50, 7, 0.0),
-    (4, "Silver", 100, 7, 0.0),
-    (5, "Gold", 250, 7, 0.0),
-    (6, "Platinum", 500, 7, 0.0),
-    (7, "Pro", 1000, 7, 0.0),
-    (8, "Advanced", 2500, 7, 0.0),
-    (9, "Premium", 5000, 7, 0.0),
-    (10, "Elite", 10000, 7, 0.0),
-    (11, "VIP", 15000, 7, 0.0),
-    (12, "Quantum", 20000, 7, 0.0),
+    (1, "Starter", 10, 7, 0.18),
+    (2, "Basic", 25, 7, 0.18),
+    (3, "Bronze", 50, 7, 0.18),
+    (4, "Silver", 100, 7, 0.18),
+    (5, "Gold", 250, 7, 0.18),
+    (6, "Platinum", 500, 7, 0.18),
+    (7, "Pro", 1000, 7, 0.18),
+    (8, "Advanced", 2500, 7, 0.18),
+    (9, "Premium", 5000, 7, 0.18),
+    (10, "Elite", 10000, 7, 0.18),
+    (11, "VIP", 15000, 7, 0.18),
+    (12, "Quantum", 20000, 7, 0.18),
 ]
 
 
 def seed_plans():
     with SessionLocal() as db:
         for pid, name, amount, days, rate in PLANS:
-            if not db.scalar(
-                select(InvestmentPlan).where(InvestmentPlan.id == pid)
-            ):
+            plan = db.scalar(
+                select(InvestmentPlan).where(
+                    InvestmentPlan.id == pid
+                )
+            )
+
+            if not plan:
                 db.add(
                     InvestmentPlan(
                         id=pid,
@@ -60,6 +66,14 @@ def seed_plans():
                         is_active=True,
                     )
                 )
+            else:
+                # Keep the existing plan synchronized
+                plan.name = name
+                plan.amount = amount
+                plan.duration_days = days
+                plan.target_rate = rate
+                plan.is_active = True
+
         db.commit()
 
 
@@ -178,6 +192,13 @@ async def ensure_user(message: Message):
                 )
             )
 
+        balance = db.scalar(
+            select(DemoBalance).where(
+                DemoBalance.telegram_id == uid
+            )
+        )
+
+        if not balance:
             db.add(
                 DemoBalance(
                     telegram_id=uid,
@@ -185,7 +206,7 @@ async def ensure_user(message: Message):
                 )
             )
 
-            db.commit()
+        db.commit()
 
 
 def is_admin(user_id: int) -> bool:
@@ -206,9 +227,103 @@ async def send_admin_message(text: str, reply_markup=None):
     )
 
 
-# =========================
+# =========================================================
+# INVESTMENT SETTLEMENT
+# =========================================================
+
+async def settle_finished_investments():
+    """
+    Finds investments whose 7-day period has ended,
+    returns the principal + configured target profit
+    to the user's available balance, and marks them completed.
+    """
+
+    now = datetime.utcnow()
+
+    with SessionLocal() as db:
+        investments = db.scalars(
+            select(Investment).where(
+                Investment.status == "active",
+                Investment.ends_at <= now,
+            )
+        ).all()
+
+        completed_users = []
+
+        for investment in investments:
+            balance = db.scalar(
+                select(DemoBalance).where(
+                    DemoBalance.telegram_id == investment.telegram_id
+                )
+            )
+
+            if not balance:
+                balance = DemoBalance(
+                    telegram_id=investment.telegram_id,
+                    balance=0.0,
+                )
+                db.add(balance)
+
+            total_return = (
+                investment.amount
+                + investment.target_profit
+            )
+
+            balance.balance += total_return
+
+            investment.status = "completed"
+            investment.completed_at = now
+
+            completed_users.append(
+                (
+                    investment.telegram_id,
+                    investment.id,
+                    investment.amount,
+                    investment.target_profit,
+                    total_return,
+                )
+            )
+
+        db.commit()
+
+    for (
+        user_id,
+        investment_id,
+        principal,
+        profit,
+        total,
+    ) in completed_users:
+        try:
+            await bot.send_message(
+                chat_id=user_id,
+                text=(
+                    "🎉 انتهت دورة الاستثمار\n\n"
+                    f"🆔 الاستثمار: #{investment_id}\n"
+                    f"💰 أصل الاستثمار: {principal:,.2f} USDT\n"
+                    f"📈 العائد المستهدف: {profit:,.2f} USDT\n"
+                    f"💵 المبلغ المعاد للرصد: {total:,.2f} USDT\n\n"
+                    "✅ أصبح المبلغ متاحًا في رصيدك."
+                ),
+            )
+        except Exception:
+            pass
+
+
+async def investment_settlement_loop():
+    while True:
+        try:
+            await settle_finished_investments()
+        except Exception as exc:
+            print(
+                f"Investment settlement error: {exc}"
+            )
+
+        await asyncio.sleep(60)
+
+
+# =========================================================
 # START
-# =========================
+# =========================================================
 
 @dp.message(CommandStart())
 async def start(message: Message):
@@ -216,20 +331,45 @@ async def start(message: Message):
 
     await message.answer(
         "🚀 مرحبًا بك في Quantum Grow\n\n"
-        "منصة لإدارة طلبات الاستثمار والحساب.\n\n"
+        "منصة لإدارة الحسابات والإيداعات "
+        "والسحوبات والاستثمارات.\n\n"
         "⚠️ الاستثمارات تنطوي على مخاطر، "
-        "ولا توجد أرباح مضمونة.\n\n"
+        "والعائد المعروض هو عائد مستهدف وفق إعدادات الخطة "
+        "وليس ضمانًا لنتيجة السوق.\n\n"
         "اختر من القائمة:",
         reply_markup=keyboard(),
     )
 
 
-# =========================
+# =========================================================
 # INVESTMENT PLANS
-# =========================
+# =========================================================
+
+def plan_keyboard(plans):
+    rows = []
+
+    for plan in plans:
+        rows.append(
+            [
+                InlineKeyboardButton(
+                    text=(
+                        f"💰 {plan.name} — "
+                        f"{plan.amount:,.0f} USDT"
+                    ),
+                    callback_data=f"plan:{plan.id}",
+                )
+            ]
+        )
+
+    return InlineKeyboardMarkup(
+        inline_keyboard=rows
+    )
+
 
 @dp.message(F.text == "💰 خطط الاستثمار")
 async def plans(message: Message):
+    await ensure_user(message)
+
     with SessionLocal() as db:
         rows = db.scalars(
             select(InvestmentPlan)
@@ -237,27 +377,242 @@ async def plans(message: Message):
             .order_by(InvestmentPlan.amount)
         ).all()
 
-    text = "💰 خطط الاستثمار\n\n"
+    text = (
+        "💰 خطط الاستثمار\n\n"
+        "اختر الخطة التي تريد الاطلاع عليها:\n\n"
+    )
 
     for p in rows:
+        target_profit = p.amount * p.target_rate
+        total_target = p.amount + target_profit
+
         text += (
             f"🔹 {p.name}\n"
-            f"💵 الحد الأدنى: {p.amount:,.2f} USDT\n"
+            f"💵 الاستثمار: {p.amount:,.2f} USDT\n"
             f"⏱ المدة: {p.duration_days} أيام\n"
+            f"📈 العائد المستهدف: "
+            f"{p.target_rate * 100:.0f}%\n"
+            f"🎯 الإجمالي المستهدف: "
+            f"{total_target:,.2f} USDT\n"
             "━━━━━━━━━━━━━━\n"
         )
 
     text += (
-        "\n⚠️ هذه الخطط ليست وعدًا بعائد ثابت. "
-        "الأداء والنتيجة يخضعان لشروط الخدمة ومخاطر السوق."
+        "\n⚠️ العائد المستهدف ليس ضمانًا للربح. "
+        "النتيجة الفعلية تعتمد على أداء النظام "
+        "وظروف السوق وشروط الخدمة."
     )
 
-    await message.answer(text)
+    await message.answer(
+        text,
+        reply_markup=plan_keyboard(rows),
+    )
 
 
-# =========================
+# =========================================================
+# PLAN DETAILS
+# =========================================================
+
+@dp.callback_query(F.data.startswith("plan:"))
+async def plan_details_callback(callback):
+    plan_id = int(
+        callback.data.split(":")[1]
+    )
+
+    with SessionLocal() as db:
+        plan = db.scalar(
+            select(InvestmentPlan).where(
+                InvestmentPlan.id == plan_id,
+                InvestmentPlan.is_active == True,
+            )
+        )
+
+    if not plan:
+        await callback.answer(
+            "الخطة غير موجودة.",
+            show_alert=True,
+        )
+        return
+
+    target_profit = (
+        plan.amount * plan.target_rate
+    )
+
+    total_target = (
+        plan.amount + target_profit
+    )
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🛒 شراء الخطة من الرصيد",
+                    callback_data=f"buyplan:{plan.id}",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔙 العودة للخطط",
+                    callback_data="backplans",
+                )
+            ],
+        ]
+    )
+
+    await callback.message.answer(
+        "📋 تفاصيل الخطة\n\n"
+        f"🔹 الخطة: {plan.name}\n"
+        f"💵 المبلغ: {plan.amount:,.2f} USDT\n"
+        f"⏱ المدة: {plan.duration_days} أيام\n"
+        f"📈 العائد المستهدف: "
+        f"{plan.target_rate * 100:.0f}%\n"
+        f"💰 العائد المستهدف: "
+        f"{target_profit:,.2f} USDT\n"
+        f"🎯 الإجمالي المستهدف: "
+        f"{total_target:,.2f} USDT\n\n"
+        "🔒 بعد شراء الخطة يصبح المبلغ المستثمر "
+        "محجوزًا حتى نهاية الدورة.\n\n"
+        "⚠️ العائد المستهدف ليس ضمانًا للربح، "
+        "والنتيجة الفعلية تعتمد على أداء النظام "
+        "وظروف السوق وشروط الخدمة.",
+        reply_markup=keyboard,
+    )
+
+    await callback.answer()
+
+
+@dp.callback_query(F.data == "backplans")
+async def back_to_plans(callback):
+    with SessionLocal() as db:
+        rows = db.scalars(
+            select(InvestmentPlan)
+            .where(InvestmentPlan.is_active == True)
+            .order_by(InvestmentPlan.amount)
+        ).all()
+
+    await callback.message.answer(
+        "💰 اختر الخطة:",
+        reply_markup=plan_keyboard(rows),
+    )
+
+    await callback.answer()
+
+
+# =========================================================
+# BUY PLAN FROM BALANCE
+# =========================================================
+
+@dp.callback_query(F.data.startswith("buyplan:"))
+async def buy_plan(callback):
+    plan_id = int(
+        callback.data.split(":")[1]
+    )
+
+    user_id = callback.from_user.id
+
+    with SessionLocal() as db:
+        plan = db.scalar(
+            select(InvestmentPlan).where(
+                InvestmentPlan.id == plan_id,
+                InvestmentPlan.is_active == True,
+            )
+        )
+
+        if not plan:
+            await callback.answer(
+                "الخطة غير موجودة.",
+                show_alert=True,
+            )
+            return
+
+        balance = db.scalar(
+            select(DemoBalance).where(
+                DemoBalance.telegram_id == user_id
+            )
+        )
+
+        if not balance:
+            balance = DemoBalance(
+                telegram_id=user_id,
+                balance=0.0,
+            )
+            db.add(balance)
+            db.commit()
+
+        if balance.balance < plan.amount:
+            current = balance.balance
+            required = plan.amount - current
+
+            await callback.message.answer(
+                "❌ لا يمكن شراء الخطة.\n\n"
+                f"💰 سعر الخطة: {plan.amount:,.2f} USDT\n"
+                f"💼 رصيدك المتاح: {current:,.2f} USDT\n"
+                f"📥 المبلغ المطلوب: {required:,.2f} USDT\n\n"
+                "يمكنك إيداع المبلغ المطلوب ثم شراء الخطة."
+            )
+
+            await callback.answer(
+                "الرصيد غير كافٍ.",
+                show_alert=True,
+            )
+            return
+
+        now = datetime.utcnow()
+        ends_at = now + timedelta(
+            days=plan.duration_days
+        )
+
+        target_profit = (
+            plan.amount * plan.target_rate
+        )
+
+        # Deduct from available balance.
+        # The amount is now locked inside the investment.
+        balance.balance -= plan.amount
+
+        investment = Investment(
+            telegram_id=user_id,
+            plan_id=plan.id,
+            amount=plan.amount,
+            target_profit=target_profit,
+            status="active",
+            started_at=now,
+            ends_at=ends_at,
+        )
+
+        db.add(investment)
+        db.commit()
+
+        investment_id = investment.id
+        remaining_balance = balance.balance
+
+    await callback.message.answer(
+        "✅ تم شراء الخطة بنجاح\n\n"
+        f"🆔 رقم الاستثمار: #{investment_id}\n"
+        f"🔹 الخطة: {plan.name}\n"
+        f"💵 المبلغ المستثمر: "
+        f"{plan.amount:,.2f} USDT\n"
+        f"⏱ المدة: {plan.duration_days} أيام\n"
+        f"📅 تاريخ البداية: "
+        f"{now.strftime('%Y-%m-%d %H:%M')} UTC\n"
+        f"📅 تاريخ الانتهاء: "
+        f"{ends_at.strftime('%Y-%m-%d %H:%M')} UTC\n\n"
+        f"📈 العائد المستهدف: "
+        f"{target_profit:,.2f} USDT\n\n"
+        "🔒 تم حجز مبلغ الاستثمار حتى انتهاء الدورة.\n"
+        "💼 رصيدك المتاح الآن: "
+        f"{remaining_balance:,.2f} USDT\n\n"
+        "⚠️ العائد المستهدف ليس ضمانًا لنتيجة السوق."
+    )
+
+    await callback.answer(
+        "تم شراء الخطة."
+    )
+
+
+# =========================================================
 # DEPOSIT
-# =========================
+# =========================================================
 
 @dp.message(F.text == "➕ الإيداع")
 async def deposit(message: Message):
@@ -324,8 +679,16 @@ async def deposit_command(message: Message):
     asset = asset.upper()
     network = network.upper()
 
-    if asset not in ["USDT", "USDC", "BTC", "ETH", "SHAM_CASH"]:
-        await message.answer("❌ طريقة الدفع غير مدعومة.")
+    if asset not in [
+        "USDT",
+        "USDC",
+        "BTC",
+        "ETH",
+        "SHAM_CASH",
+    ]:
+        await message.answer(
+            "❌ طريقة الدفع غير مدعومة."
+        )
         return
 
     try:
@@ -335,7 +698,9 @@ async def deposit_command(message: Message):
             raise ValueError
 
     except ValueError:
-        await message.answer("❌ المبلغ غير صحيح.")
+        await message.answer(
+            "❌ المبلغ غير صحيح."
+        )
         return
 
     await ensure_user(message)
@@ -352,6 +717,7 @@ async def deposit_command(message: Message):
 
         db.add(req)
         db.commit()
+
         request_id = req.id
 
     admin_keyboard = InlineKeyboardMarkup(
@@ -369,7 +735,10 @@ async def deposit_command(message: Message):
         ]
     )
 
-    username = message.from_user.username or "بدون اسم"
+    username = (
+        message.from_user.username
+        or "بدون اسم"
+    )
 
     admin_text = (
         "📥 طلب إيداع جديد\n\n"
@@ -394,9 +763,9 @@ async def deposit_command(message: Message):
     )
 
 
-# =========================
+# =========================================================
 # ADMIN DEPOSIT ACTIONS
-# =========================
+# =========================================================
 
 @dp.callback_query(F.data.startswith("depapprove:"))
 async def approve_deposit(callback):
@@ -407,7 +776,9 @@ async def approve_deposit(callback):
         )
         return
 
-    request_id = int(callback.data.split(":")[1])
+    request_id = int(
+        callback.data.split(":")[1]
+    )
 
     with SessionLocal() as db:
         req = db.scalar(
@@ -468,7 +839,9 @@ async def approve_deposit(callback):
         + "\n\n✅ تم قبول الطلب وتحديث الرصيد."
     )
 
-    await callback.answer("تم قبول الإيداع.")
+    await callback.answer(
+        "تم قبول الإيداع."
+    )
 
 
 @dp.callback_query(F.data.startswith("depreject:"))
@@ -480,7 +853,9 @@ async def reject_deposit(callback):
         )
         return
 
-    request_id = int(callback.data.split(":")[1])
+    request_id = int(
+        callback.data.split(":")[1]
+    )
 
     with SessionLocal() as db:
         req = db.scalar(
@@ -521,12 +896,14 @@ async def reject_deposit(callback):
         + "\n\n❌ تم رفض الطلب."
     )
 
-    await callback.answer("تم رفض الإيداع.")
+    await callback.answer(
+        "تم رفض الإيداع."
+    )
 
 
-# =========================
+# =========================================================
 # BALANCE
-# =========================
+# =========================================================
 
 @dp.message(F.text == "💼 رصيدي")
 async def balance(message: Message):
@@ -539,17 +916,36 @@ async def balance(message: Message):
             )
         )
 
-    current_balance = bal.balance if bal else 0.0
+        active_investments = db.scalars(
+            select(Investment).where(
+                Investment.telegram_id == message.from_user.id,
+                Investment.status == "active",
+            )
+        ).all()
+
+    current_balance = (
+        bal.balance if bal else 0.0
+    )
+
+    locked = sum(
+        inv.amount
+        for inv in active_investments
+    )
 
     await message.answer(
         "💼 رصيد الحساب\n\n"
-        f"💵 {current_balance:,.2f} USDT"
+        f"💵 الرصيد المتاح: "
+        f"{current_balance:,.2f} USDT\n"
+        f"🔒 المبلغ المستثمر والمحجوز: "
+        f"{locked:,.2f} USDT\n\n"
+        f"📊 الاستثمارات النشطة: "
+        f"{len(active_investments)}"
     )
 
 
-# =========================
+# =========================================================
 # WITHDRAWAL
-# =========================
+# =========================================================
 
 @dp.message(F.text == "➖ السحب")
 async def withdrawal(message: Message):
@@ -559,8 +955,8 @@ async def withdrawal(message: Message):
         "➖ السحب\n\n"
         "لإنشاء طلب سحب أرسل:\n\n"
         "/withdraw USDT TRC20 100 YOUR_WALLET_ADDRESS\n\n"
-        "مثال:\n"
-        "/withdraw USDT TRC20 100 TXyz123..."
+        "⚠️ لا يمكن سحب الأموال المحجوزة داخل "
+        "استثمار نشط."
     )
 
 
@@ -600,7 +996,9 @@ async def withdraw_command(message: Message):
             raise ValueError
 
     except ValueError:
-        await message.answer("❌ المبلغ غير صحيح.")
+        await message.answer(
+            "❌ المبلغ غير صحيح."
+        )
         return
 
     await ensure_user(message)
@@ -613,8 +1011,16 @@ async def withdraw_command(message: Message):
         )
 
         if not bal or bal.balance < amount:
+            available = (
+                bal.balance if bal else 0.0
+            )
+
             await message.answer(
-                "❌ الرصيد المتاح غير كافٍ."
+                "❌ الرصيد المتاح غير كافٍ.\n\n"
+                f"💼 المتاح: {available:,.2f} USDT\n"
+                f"💸 المطلوب: {amount:,.2f} USDT\n\n"
+                "الأموال الموجودة داخل الاستثمارات "
+                "النشطة غير قابلة للسحب."
             )
             return
 
@@ -647,7 +1053,10 @@ async def withdraw_command(message: Message):
         ]
     )
 
-    username = message.from_user.username or "بدون اسم"
+    username = (
+        message.from_user.username
+        or "بدون اسم"
+    )
 
     admin_text = (
         "💸 طلب سحب جديد\n\n"
@@ -672,9 +1081,9 @@ async def withdraw_command(message: Message):
     )
 
 
-# =========================
+# =========================================================
 # ADMIN WITHDRAWAL ACTIONS
-# =========================
+# =========================================================
 
 @dp.callback_query(F.data.startswith("withapprove:"))
 async def approve_withdrawal(callback):
@@ -685,7 +1094,9 @@ async def approve_withdrawal(callback):
         )
         return
 
-    request_id = int(callback.data.split(":")[1])
+    request_id = int(
+        callback.data.split(":")[1]
+    )
 
     with SessionLocal() as db:
         req = db.scalar(
@@ -747,7 +1158,9 @@ async def approve_withdrawal(callback):
         + "\n\n✅ تمت الموافقة وخصم المبلغ من الرصيد."
     )
 
-    await callback.answer("تمت الموافقة على السحب.")
+    await callback.answer(
+        "تمت الموافقة على السحب."
+    )
 
 
 @dp.callback_query(F.data.startswith("withreject:"))
@@ -759,7 +1172,9 @@ async def reject_withdrawal(callback):
         )
         return
 
-    request_id = int(callback.data.split(":")[1])
+    request_id = int(
+        callback.data.split(":")[1]
+    )
 
     with SessionLocal() as db:
         req = db.scalar(
@@ -800,17 +1215,21 @@ async def reject_withdrawal(callback):
         + "\n\n❌ تم رفض طلب السحب."
     )
 
-    await callback.answer("تم رفض السحب.")
+    await callback.answer(
+        "تم رفض السحب."
+    )
 
 
-# =========================
+# =========================================================
 # ADMIN PANEL
-# =========================
+# =========================================================
 
 @dp.message(Command("admin"))
 async def admin_command(message: Message):
     if not is_admin(message.from_user.id):
-        await message.answer("⛔ غير مصرح لك.")
+        await message.answer(
+            "⛔ غير مصرح لك."
+        )
         return
 
     await message.answer(
@@ -825,7 +1244,9 @@ async def admin_command(message: Message):
 @dp.message(F.text == "👨‍💼 لوحة المسؤول")
 async def admin_button(message: Message):
     if not is_admin(message.from_user.id):
-        await message.answer("⛔ غير مصرح لك.")
+        await message.answer(
+            "⛔ غير مصرح لك."
+        )
         return
 
     await message.answer(
@@ -840,13 +1261,17 @@ async def admin_button(message: Message):
 @dp.message(Command("pending_deposits"))
 async def pending_deposits(message: Message):
     if not is_admin(message.from_user.id):
-        await message.answer("⛔ غير مصرح لك.")
+        await message.answer(
+            "⛔ غير مصرح لك."
+        )
         return
 
     with SessionLocal() as db:
         rows = db.scalars(
             select(DepositRequest)
-            .where(DepositRequest.status == "pending")
+            .where(
+                DepositRequest.status == "pending"
+            )
             .order_by(DepositRequest.id.desc())
         ).all()
 
@@ -874,13 +1299,17 @@ async def pending_deposits(message: Message):
 @dp.message(Command("pending_withdrawals"))
 async def pending_withdrawals(message: Message):
     if not is_admin(message.from_user.id):
-        await message.answer("⛔ غير مصرح لك.")
+        await message.answer(
+            "⛔ غير مصرح لك."
+        )
         return
 
     with SessionLocal() as db:
         rows = db.scalars(
             select(WithdrawalRequest)
-            .where(WithdrawalRequest.status == "pending")
+            .where(
+                WithdrawalRequest.status == "pending"
+            )
             .order_by(WithdrawalRequest.id.desc())
         ).all()
 
@@ -908,7 +1337,9 @@ async def pending_withdrawals(message: Message):
 @dp.message(Command("user_balance"))
 async def user_balance(message: Message):
     if not is_admin(message.from_user.id):
-        await message.answer("⛔ غير مصرح لك.")
+        await message.answer(
+            "⛔ غير مصرح لك."
+        )
         return
 
     parts = message.text.split()
@@ -922,7 +1353,9 @@ async def user_balance(message: Message):
     try:
         telegram_id = int(parts[1])
     except ValueError:
-        await message.answer("❌ Telegram ID غير صحيح.")
+        await message.answer(
+            "❌ Telegram ID غير صحيح."
+        )
         return
 
     with SessionLocal() as db:
@@ -932,66 +1365,189 @@ async def user_balance(message: Message):
             )
         )
 
-    amount = bal.balance if bal else 0.0
+        investments = db.scalars(
+            select(Investment).where(
+                Investment.telegram_id == telegram_id,
+                Investment.status == "active",
+            )
+        ).all()
+
+    amount = (
+        bal.balance if bal else 0.0
+    )
+
+    locked = sum(
+        inv.amount
+        for inv in investments
+    )
 
     await message.answer(
         f"💰 رصيد المستخدم\n\n"
         f"Telegram ID: {telegram_id}\n"
-        f"الرصيد: {amount:,.2f} USDT"
+        f"💵 الرصيد المتاح: "
+        f"{amount:,.2f} USDT\n"
+        f"🔒 المبلغ المستثمر: "
+        f"{locked:,.2f} USDT\n"
+        f"📊 الاستثمارات النشطة: "
+        f"{len(investments)}"
     )
 
 
 @dp.message(Command("system"))
 async def admin_system(message: Message):
     if not is_admin(message.from_user.id):
-        await message.answer("⛔ غير مصرح لك.")
+        await message.answer(
+            "⛔ غير مصرح لك."
+        )
         return
 
     with SessionLocal() as db:
         deposits = db.scalars(
             select(DepositRequest)
-            .where(DepositRequest.status == "pending")
+            .where(
+                DepositRequest.status == "pending"
+            )
         ).all()
 
         withdrawals = db.scalars(
             select(WithdrawalRequest)
-            .where(WithdrawalRequest.status == "pending")
+            .where(
+                WithdrawalRequest.status == "pending"
+            )
         ).all()
 
-        users = db.scalars(select(User)).all()
+        users = db.scalars(
+            select(User)
+        ).all()
+
+        active_investments = db.scalars(
+            select(Investment).where(
+                Investment.status == "active"
+            )
+        ).all()
 
     await message.answer(
         "📊 حالة النظام\n\n"
         "🟢 البوت يعمل\n"
         f"👥 المستخدمون: {len(users)}\n"
         f"📥 إيداعات معلقة: {len(deposits)}\n"
-        f"💸 سحوبات معلقة: {len(withdrawals)}"
+        f"💸 سحوبات معلقة: {len(withdrawals)}\n"
+        f"📊 استثمارات نشطة: "
+        f"{len(active_investments)}"
     )
 
 
-# =========================
+# =========================================================
 # USER INVESTMENTS
-# =========================
+# =========================================================
 
 @dp.message(F.text == "📊 استثماراتي")
 async def investments(message: Message):
     await ensure_user(message)
 
-    await message.answer(
-        "📊 استثماراتي\n\n"
-        "لا توجد استثمارات مسجلة حاليًا على هذا الحساب."
+    await settle_finished_investments()
+
+    with SessionLocal() as db:
+        rows = db.scalars(
+            select(Investment)
+            .where(
+                Investment.telegram_id
+                == message.from_user.id
+            )
+            .order_by(Investment.id.desc())
+        ).all()
+
+        plans_map = {
+            p.id: p
+            for p in db.scalars(
+                select(InvestmentPlan)
+            ).all()
+        }
+
+    if not rows:
+        await message.answer(
+            "📊 استثماراتي\n\n"
+            "لا توجد استثمارات مسجلة حاليًا."
+        )
+        return
+
+    text = "📊 استثماراتي\n\n"
+
+    now = datetime.utcnow()
+
+    for inv in rows:
+        plan = plans_map.get(inv.plan_id)
+
+        plan_name = (
+            plan.name
+            if plan
+            else f"Plan #{inv.plan_id}"
+        )
+
+        if inv.status == "active":
+            remaining = inv.ends_at - now
+
+            if remaining.total_seconds() > 0:
+                days = remaining.days
+                hours = (
+                    remaining.seconds // 3600
+                )
+
+                text += (
+                    f"🟢 #{inv.id} — {plan_name}\n"
+                    f"💰 المبلغ: "
+                    f"{inv.amount:,.2f} USDT\n"
+                    f"🔒 الحالة: نشط ومحجوز\n"
+                    f"⏳ المتبقي تقريبًا: "
+                    f"{days} يوم و {hours} ساعة\n"
+                    f"📅 الانتهاء: "
+                    f"{inv.ends_at.strftime('%Y-%m-%d %H:%M')} UTC\n"
+                    "━━━━━━━━━━━━━━\n"
+                )
+            else:
+                text += (
+                    f"🟡 #{inv.id} — {plan_name}\n"
+                    "⏳ بانتظار التسوية...\n"
+                    "━━━━━━━━━━━━━━\n"
+                )
+
+        elif inv.status == "completed":
+            total = (
+                inv.amount
+                + inv.target_profit
+            )
+
+            text += (
+                f"✅ #{inv.id} — {plan_name}\n"
+                f"💰 الأصل: "
+                f"{inv.amount:,.2f} USDT\n"
+                f"📈 العائد المستهدف: "
+                f"{inv.target_profit:,.2f} USDT\n"
+                f"💵 الإجمالي المسوى: "
+                f"{total:,.2f} USDT\n"
+                "🔓 أصبحت الأموال متاحة.\n"
+                "━━━━━━━━━━━━━━\n"
+            )
+
+    text += (
+        "\n⚠️ العائد المذكور هو عائد مستهدف "
+        "وليس ضمانًا للربح."
     )
 
+    await message.answer(text)
 
-# =========================
+
+# =========================================================
 # STATUS / LANGUAGE / INFO
-# =========================
+# =========================================================
 
 @dp.message(F.text == "🤖 حالة النظام")
 async def status(message: Message):
     await message.answer(
         "🤖 حالة النظام\n\n"
-        "🟢 البوت يعمل ويستقبل الطلبات."
+        "🟢 البوت يعمل ويستقبل الطلبات.\n"
+        "🟢 تتم مراقبة الاستثمارات المنتهية "
+        "وتسويتها تلقائيًا."
     )
 
 
@@ -1001,7 +1557,8 @@ async def language(message: Message):
         "🌐 اللغة\n\n"
         "🇸🇦 العربية\n"
         "🇬🇧 English\n\n"
-        "واجهة English الكاملة نضيفها بعد استقرار النسخة العربية."
+        "واجهة English الكاملة نضيفها "
+        "بعد استقرار النسخة العربية."
     )
 
 
@@ -1009,19 +1566,36 @@ async def language(message: Message):
 async def about(message: Message):
     await message.answer(
         "🚀 Quantum Grow\n\n"
-        "إدارة حسابات وطلبات إيداع وسحب واستثمار.\n\n"
-        "⚠️ لا توجد أرباح مضمونة، وأي عملية مالية "
-        "تخضع للمراجعة وشروط الخدمة."
+        "إدارة الحسابات والإيداعات والسحوبات "
+        "والاستثمارات.\n\n"
+        "📅 مدة الدورة: 7 أيام\n"
+        "📈 العائد المستهدف حسب إعدادات الخطة.\n\n"
+        "⚠️ لا توجد أرباح مضمونة، والنتيجة الفعلية "
+        "تعتمد على أداء النظام وظروف السوق "
+        "وشروط الخدمة."
     )
 
 
-# =========================
+# =========================================================
 # MAIN
-# =========================
+# =========================================================
 
 async def main():
     print("Quantum Grow bot is starting...")
-    await dp.start_polling(bot)
+
+    settlement_task = asyncio.create_task(
+        investment_settlement_loop()
+    )
+
+    try:
+        await dp.start_polling(bot)
+    finally:
+        settlement_task.cancel()
+
+        try:
+            await settlement_task
+        except asyncio.CancelledError:
+            pass
 
 
 if __name__ == "__main__":
