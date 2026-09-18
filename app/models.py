@@ -33,7 +33,7 @@ class DemoBalance(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        onupdate=datetime.utcnow
     )
 
 
@@ -44,8 +44,54 @@ class InvestmentPlan(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     amount: Mapped[float] = mapped_column(Float, nullable=False)
     duration_days: Mapped[int] = mapped_column(Integer, default=7)
+
+    # 18% target return.
+    # This is a target, not a guaranteed market return.
     target_rate: Mapped[float] = mapped_column(Float, default=0.18)
+
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class Investment(Base):
+    __tablename__ = "investments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    telegram_id: Mapped[int] = mapped_column(
+        Integer, index=True, nullable=False
+    )
+
+    plan_id: Mapped[int] = mapped_column(
+        Integer, index=True, nullable=False
+    )
+
+    amount: Mapped[float] = mapped_column(
+        Float, nullable=False
+    )
+
+    target_profit: Mapped[float] = mapped_column(
+        Float, default=0.0
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(30),
+        default="active"
+    )
+
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+    ends_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False
+    )
+
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True
+    )
 
 
 class DepositRequest(Base):
@@ -58,31 +104,38 @@ class DepositRequest(Base):
     )
 
     asset: Mapped[str] = mapped_column(
-        String(20), default="USDT"
+        String(20),
+        default="USDT"
     )
 
     network: Mapped[str] = mapped_column(
-        String(50), nullable=False
+        String(50),
+        nullable=False
     )
 
     amount: Mapped[float] = mapped_column(
-        Float, nullable=False
+        Float,
+        nullable=False
     )
 
     tx_hash: Mapped[str | None] = mapped_column(
-        String(255), nullable=True
+        String(255),
+        nullable=True
     )
 
     status: Mapped[str] = mapped_column(
-        String(30), default="pending"
+        String(30),
+        default="pending"
     )
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow
+        DateTime,
+        default=datetime.utcnow
     )
 
     reviewed_at: Mapped[datetime | None] = mapped_column(
-        DateTime, nullable=True
+        DateTime,
+        nullable=True
     )
 
 
@@ -96,33 +149,41 @@ class WithdrawalRequest(Base):
     )
 
     asset: Mapped[str] = mapped_column(
-        String(20), default="USDT"
+        String(20),
+        default="USDT"
     )
 
     network: Mapped[str] = mapped_column(
-        String(50), nullable=False
+        String(50),
+        nullable=False
     )
 
     amount: Mapped[float] = mapped_column(
-        Float, nullable=False
+        Float,
+        nullable=False
     )
 
     wallet_address: Mapped[str] = mapped_column(
-        String(255), nullable=False
+        String(255),
+        nullable=False
     )
 
     status: Mapped[str] = mapped_column(
-        String(30), default="pending"
+        String(30),
+        default="pending"
     )
 
     tx_hash: Mapped[str | None] = mapped_column(
-        String(255), nullable=True
+        String(255),
+        nullable=True
     )
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow
+        DateTime,
+        default=datetime.utcnow
     )
 
     reviewed_at: Mapped[datetime | None] = mapped_column(
-        DateTime, nullable=True
+        DateTime,
+        nullable=True
     )
