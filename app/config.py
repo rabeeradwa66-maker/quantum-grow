@@ -1,3 +1,4 @@
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -7,7 +8,6 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./quantum_grow.db"
     webapp_url: str = "http://localhost:8000"
 
-    # Payment settings
     usdt_network: str = "TRC20"
     usdt_address: str = ""
 
@@ -17,8 +17,12 @@ class Settings(BaseSettings):
     btc_network: str = "Bitcoin"
     btc_address: str = ""
 
-    eth_network: str = "ERC20"
+    eth_network: str = "Ethereum"
     eth_address: str = ""
+
+    sham_cash_id: str = ""
+
+    admin_telegram_id: int = 0
 
     model_config = SettingsConfigDict(
         env_file=".env",
