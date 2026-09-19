@@ -146,11 +146,11 @@ def language_keyboard():
 
 def payment_keyboard(lang):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=tr(lang,"usdt"), callback_data="dep:USDT")],
-        [InlineKeyboardButton(text=tr(lang,"usdc"), callback_data="dep:USDC")],
-        [InlineKeyboardButton(text=tr(lang,"btc"), callback_data="dep:BTC")],
-        [InlineKeyboardButton(text=tr(lang,"eth"), callback_data="dep:ETH")],
-        [InlineKeyboardButton(text=tr(lang,"sham"), callback_data="dep:SHAM_CASH")],
+        [InlineKeyboardButton(text=tr(lang,"usdt"), callback_data="depmethod:USDT")],
+        [InlineKeyboardButton(text=tr(lang,"usdc"), callback_data="depmethod:USDC")],
+        [InlineKeyboardButton(text=tr(lang,"btc"), callback_data="depmethod:BTC")],
+        [InlineKeyboardButton(text=tr(lang,"eth"), callback_data="depmethod:ETH")],
+        [InlineKeyboardButton(text=tr(lang,"sham"), callback_data="depmethod:SHAM_CASH")],
     ])
 
 def payment_details(asset):
@@ -267,7 +267,7 @@ async def deposit(message: Message, state: FSMContext):
     lang=get_language(message.from_user.id)
     await message.answer(tr(lang,"deposit_choose"), reply_markup=payment_keyboard(lang))
 
-@dp.callback_query(F.data.startswith("dep:"))
+@dp.callback_query(F.data.startswith("depmethod:"))
 async def deposit_currency(callback: CallbackQuery, state: FSMContext):
     asset=callback.data.split(":",1)[1]; lang=get_language(callback.from_user.id)
     network,address=payment_details(asset)
@@ -298,10 +298,10 @@ async def deposit_amount(message: Message, state: FSMContext):
         text=tr(lang,"sham_details",amount=amount,address=address)
     else:
         text=tr(lang,"crypto_details",asset=asset,amount=amount,network=network,address=address)
-    markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text=tr(lang,"sent"),callback_data="dep:sent")]])
+    markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text=tr(lang,"sent"),callback_data="depsent")]])
     await message.answer(text,reply_markup=markup)
 
-@dp.callback_query(F.data=="dep:sent")
+@dp.callback_query(F.data=="depsent")
 async def deposit_sent(callback: CallbackQuery, state: FSMContext):
     lang=get_language(callback.from_user.id); data=await state.get_data()
     if not data.get("asset") or not data.get("amount"):
@@ -333,7 +333,8 @@ async def deposit_reference(message: Message, state: FSMContext):
 
 @dp.message(Command("deposit"))
 async def deposit_command(message: Message):
-    await message.answer(tr(get_language(message.from_user.id),"deposit_choose"))
+    lang = get_language(message.from_user.id)
+    await message.answer(tr(lang,"deposit_choose"), reply_markup=payment_keyboard(lang))
 
 @dp.callback_query(F.data.startswith("depapprove:"))
 async def approve_deposit(callback: CallbackQuery):
