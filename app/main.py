@@ -43,8 +43,8 @@ seed_plans()
 # ---------------------------------------------------------------------
 T = {
 "ar": {
-"welcome": "🚀 مرحبًا بك في Quantum Grow\n\nاستكشف Quantum Grow -  نظام استثماري يعتمد على تقنيات الذكاء الاصطناعي مع عائد ربح يصل الى 30% اسبوعياً.\n\nاختر من القائمة:",
-"plans":"💰 خطط الاستثمار","deposit":"➕ الإيداع","withdraw":"➖ السحب","balance":"💼 رصيدي","investments":"📊 استثماراتي","status":"🤖 حالة النظام","language":"🌐 اللغة","info":"ℹ️ معلومات","admin":"👨‍💼 لوحة المسؤول",
+"welcome": "🚀 مرحبًا بك في Quantum Grow\n\n  نظام استثماري يعتمد على تقنيات الذكاء الاصطناعي مع عائد ربح يصل الى 30% اسبوعياً.\n\nاختر من القائمة:",
+"plans":"💰 خطط الاستثمار","deposit":"➕ الإيداع","withdraw":"➖ السحب","balance":"💼 رصيدي","investments":"📊 استثماراتي","status":"🤖 حالة النظام","language":"🌐 اللغة","info":"ℹ️ معلومات","admin":"👨‍💼 لوحة المسؤول","broadcast_button":"📢 إرسال للمستخدمين","broadcast_prompt":"📢 وضع الإرسال الجماعي\n\nأرسل الآن الرسالة أو الصورة التي تريد إرسالها لجميع المستخدمين.\n\nلإلغاء العملية استخدم /cancel_broadcast.","broadcast_done":"✅ تم إرسال المحتوى.\n\n📨 تم الإرسال بنجاح: {sent}\n⚠️ تعذر الإرسال: {failed}","broadcast_cancelled":"❌ تم إلغاء الإرسال الجماعي.","broadcast_unsupported":"⚠️ أرسل رسالة نصية أو صورة مع وصف اختياري.",
 "choose_language":"🌐 اختيار اللغة\n\nاختر اللغة التي تريد استخدامها:","arabic_selected":"🇸🇦 تم اختيار اللغة العربية.","english_selected":"🇬🇧 تم اختيار اللغة الإنجليزية.",
 "choose_plan":"💰 خطط الاستثمار\n\nاختر الخطة التي تريد الاطلاع على تفاصيلها:","investment_duration":"⏱ المدة","target_return":"📈 العائد المستهدف","target_total":"🎯 القيمة المستهدفة","investment_amount":"💵 الاستثمار",
 "risk":"العائد المستهدف للربح يتراوح بين 18% و 30% . النتيجة الفعلية تعتمد على أداء النظام وظروف السوق وشروط الخدمة.",
@@ -65,11 +65,11 @@ T = {
 "withdraw_help":"➖ السحب\n\nلإنشاء طلب سحب استخدم:\n\n/withdraw USDT TRC20 100 YOUR_WALLET_ADDRESS\n\n🔒 الأموال الموجودة في استثمارات نشطة غير متاحة للسحب.",
 "withdraw_syntax":"❌ الصيغة الصحيحة:\n/withdraw USDT TRC20 100 YOUR_WALLET_ADDRESS","unsupported":"❌ العملة غير مدعومة.","withdraw_insufficient":"❌ الرصيد المتاح غير كافٍ.\n\n💼 المتاح: {available:,.2f} USDT\n💸 المطلوب: {amount:,.2f} USDT","withdraw_created":"✅ تم إنشاء طلب السحب #{id}.\n\n⏳ الطلب بانتظار مراجعة الإدارة.",
 "admin_withdraw":"💸 طلب سحب جديد\n\n🆔 الطلب: #{id}\n👤 المستخدم: @{username}\nTelegram ID: {user_id}\n💳 العملة: {asset}\n🌐 الشبكة: {network}\n💰 المبلغ: {amount:,.2f}\n📍 محفظة المستلم:\n{wallet}\n\nاختر الإجراء:","approve_withdraw":"✅ قبول السحب","withdraw_approved":"✅ تمت الموافقة على طلب السحب\n\n🆔 الطلب: #{id}\n💳 العملة: {asset}\n💰 المبلغ: {amount:,.2f}\n\nسيتم تنفيذ التحويل ومشاركة TX Hash بعد إتمام العملية.","withdraw_rejected":"❌ تم رفض طلب السحب #{id}.\n\nلم يتم خصم أي مبلغ من رصيدك.",
-"admin_panel":"👨‍💼 لوحة المسؤول\n\n/pending_deposits\n/pending_withdrawals\n/user_balance TELEGRAM_ID\n/system","no_pending_deposits":"📥 لا توجد طلبات إيداع معلقة.","no_pending_withdrawals":"💸 لا توجد طلبات سحب معلقة.","unauthorized":"⛔ غير مصرح لك.","not_found":"❌ الطلب غير موجود.","processed":"⚠️ تمت معالجة هذا الطلب مسبقًا.","admin_insufficient":"❌ الرصيد غير كافٍ.",
+"admin_panel":"👨‍💼 لوحة المسؤول\n\n📢 لإرسال رسالة أو صورة لجميع المستخدمين اضغط زر «📢 إرسال للمستخدمين» أو استخدم /broadcast.\n\n/pending_deposits\n/pending_withdrawals\n/user_balance TELEGRAM_ID\n/system","no_pending_deposits":"📥 لا توجد طلبات إيداع معلقة.","no_pending_withdrawals":"💸 لا توجد طلبات سحب معلقة.","unauthorized":"⛔ غير مصرح لك.","not_found":"❌ الطلب غير موجود.","processed":"⚠️ تمت معالجة هذا الطلب مسبقًا.","admin_insufficient":"❌ الرصيد غير كافٍ.",
 "admin_balance":"💰 رصيد المستخدم\n\nTelegram ID: {id}\n💵 الرصيد المتاح: {balance:,.2f} USDT\n🔒 المبلغ المستثمر: {locked:,.2f} USDT\n📊 الاستثمارات النشطة: {count}",
 "system":"📊 حالة النظام\n\n🟢 البوت يعمل\n👥 المستخدمون: {users}\n📥 إيداعات معلقة: {deposits}\n💸 سحوبات معلقة: {withdrawals}\n📊 استثمارات نشطة: {investments}",
 "no_investments":"📊 استثماراتي\n\nلا توجد استثمارات مسجلة حاليًا.","active":"🟢 #{id} — {plan}\n💰 المبلغ: {amount:,.2f} USDT\n🔒 الحالة: نشط ومحجوز\n⏳ المتبقي تقريبًا: {days} يوم و{hours} ساعة\n📅 الانتهاء: {end} UTC\n━━━━━━━━━━━━━━\n","waiting":"🟡 #{id} — {plan}\n⏳ بانتظار التسوية...\n━━━━━━━━━━━━━━\n","completed":"✅ #{id} — {plan}\n💰 الأصل: {amount:,.2f} USDT\n📈 العائد المستهدف: {profit:,.2f} USDT\n💵 الإجمالي المسوى: {total:,.2f} USDT\n🔓 أصبحت الأموال متاحة.\n━━━━━━━━━━━━━━\n",
-"status_text":"🤖 حالة النظام\n\n🟢 البوت يعمل ويستقبل الطلبات.\n🟢 تتم مراقبة الاستثمارات المنتهية وتسويتها تلقائيًا.","about":"🚀 Quantum Grow\n\n.منصة Quantum Grow تفتح لك الباب للاستفادة من تقنيات الذكاء الاصطناعي المتقدمة. نظام استثماري ذكي مصمم ليتناسب مع شروط البرنامج ويساعدك على تحقيق عوائد ربح مدروسة بالكامل.\n\n🏢 الخلفية التقنية\nTrade Ideas LLC تأسست عام 2003 في الولايات المتحدة، ويظهر عنوانها في Encinitas, California.\n\n🤖 نركز على التكنولوجيا وتحليل البيانات وأدوات الذكاء الاصطناعي وتجربة رقمية منظمة.\n\nQuantum Grow\nTechnology • Intelligence • Transparency",
+"status_text":"🤖 حالة النظام\n\n🟢 البوت يعمل ويستقبل الطلبات.\n🟢 تتم مراقبة الاستثمارات المنتهية وتسويتها تلقائيًا.","about":"🚀 Quantum Grow\n\n تفتح لك الباب للاستفادة من تقنيات الذكاء الاصطناعي المتقدمة. نظام استثماري ذكي مصمم ليتناسب مع شروط البرنامج ويساعدك على تحقيق عوائد ربح مدروسة بالكامل.\n\n🏢 الخلفية التقنية\nTrade Ideas LLC تأسست عام 2003 في الولايات المتحدة، ويظهر عنوانها في Encinitas, California.\n\n🤖 نركز على التكنولوجيا وتحليل البيانات وأدوات الذكاء الاصطناعي وتجربة رقمية منظمة.\n\nQuantum Grow\nTechnology • Intelligence • Transparency",
 "completed_notice":"🎉 انتهت دورة الاستثمار\n\n🆔 الاستثمار: #{id}\n💰 أصل الاستثمار: {principal:,.2f} USDT\n📈 العائد المستهدف: {profit:,.2f} USDT\n💵 الإجمالي المسوى: {total:,.2f} USDT\n\n✅ أصبح المبلغ متاحًا في رصيدك."
 },
 "en": {}
@@ -81,7 +81,7 @@ T["en"] = {
 # Complete English dictionary by mapping the actual keys used above.
 EN = {
 "welcome":"🚀 Welcome to Quantum Grow\n\nA digital platform for managing accounts, deposits, withdrawals and investments.\n\nChoose from the menu:",
-"plans":"💰 Investment Plans","deposit":"➕ Deposit","withdraw":"➖ Withdraw","balance":"💼 My Balance","investments":"📊 My Investments","status":"🤖 System Status","language":"🌐 Language","info":"ℹ️ Information","admin":"👨‍💼 Admin Panel",
+"plans":"💰 Investment Plans","deposit":"➕ Deposit","withdraw":"➖ Withdraw","balance":"💼 My Balance","investments":"📊 My Investments","status":"🤖 System Status","language":"🌐 Language","info":"ℹ️ Information","admin":"👨‍💼 Admin Panel","broadcast_button":"📢 Broadcast to Users","broadcast_prompt":"📢 Broadcast Mode\n\nSend the message or photo you want to send to all users.\n\nUse /cancel_broadcast to cancel.","broadcast_done":"✅ Broadcast completed.\n\n📨 Sent successfully: {sent}\n⚠️ Failed: {failed}","broadcast_cancelled":"❌ Broadcast cancelled.","broadcast_unsupported":"⚠️ Send a text message or a photo with an optional caption.",
 "choose_language":"🌐 Language Selection\n\nChoose your preferred language:","arabic_selected":"🇸🇦 Arabic language selected.","english_selected":"🇬🇧 English language selected.","choose_plan":"💰 Investment Plans\n\nChoose a plan to view its details:","investment_duration":"⏱ Duration","target_return":"📈 Target Return","target_total":"🎯 Target Value","investment_amount":"💵 Investment","risk":"The target return is not a guarantee of profit. Actual results depend on system performance, market conditions and applicable terms.",
 "plan_details":"📋 Plan Details","plan":"🔹 Plan","amount":"💵 Amount","target_profit":"📈 Target Return","buy_plan":"🛒 Activate Plan from Balance","back_plans":"🔙 Back to Plans","locked":"🔒 The invested amount is locked until the investment cycle ends.","plan_not_found":"❌ Plan not found.",
 "insufficient":"❌ The plan cannot be activated.\n\n💰 Plan price: {amount:,.2f} USDT\n💼 Available balance: {balance:,.2f} USDT\n📥 Additional amount required: {required:,.2f} USDT",
@@ -90,7 +90,7 @@ EN = {
 "invalid_amount":"❌ Invalid amount.\n\nEnter a numeric amount. The minimum deposit is $10.","not_configured":"⚠️ {asset} has not been configured yet.\nPlease contact administration.","crypto_details":"💳 {asset}\n\n💵 Amount: ${amount:,.2f}\n🌐 Network: {network}\n📍 Deposit address:\n{address}\n\nAfter completing the transfer, press “Transfer Sent”.","sham_details":"🇸🇾 Sham Cash\n\n💵 Amount: ${amount:,.2f}\n🆔 Receiving ID:\n{address}\n\nAfter completing the transfer, press “Transfer Sent”.","sent":"✅ Transfer Sent","reference":"🔖 Transaction Reference\n\nSend the Transaction Hash / TXID for your transfer.","sham_reference":"🔖 Transaction Reference\n\nSend the transaction/reference number shown by Sham Cash.",
 "deposit_created":"✅ Deposit request #{id} has been recorded.\n\n💰 Amount: ${amount:,.2f}\n💳 Method: {asset}\n⏳ Status: Pending administrative review.","admin_deposit":"📥 New Deposit Request\n\n🆔 Request: #{id}\n👤 User: @{username}\nTelegram ID: {user_id}\n💳 Method: {asset}\n🌐 Network: {network}\n💰 Amount: ${amount:,.2f}\n🧾 Reference / TX Hash:\n{reference}\n\nChoose an action:","approve_deposit":"✅ Approve Deposit","reject":"❌ Reject","deposit_approved":"✅ Deposit approved\n\n🆔 Request: #{id}\n💳 Method: {asset}\n💰 Amount: ${amount:,.2f}\n\nYour account balance has been updated.","deposit_rejected":"❌ Deposit request #{id} was rejected.",
 "balance_title":"💼 Account Balance\n\n💵 Available balance: {balance:,.2f} USDT\n🔒 Locked investment amount: {locked:,.2f} USDT\n\n📊 Active investments: {count}","withdraw_help":"➖ Withdraw\n\nTo create a withdrawal request use:\n\n/withdraw USDT TRC20 100 YOUR_WALLET_ADDRESS\n\n🔒 Funds in active investments are not available for withdrawal.","withdraw_syntax":"❌ Correct format:\n/withdraw USDT TRC20 100 YOUR_WALLET_ADDRESS","unsupported":"❌ Unsupported currency.","withdraw_insufficient":"❌ Available balance is insufficient.\n\n💼 Available: {available:,.2f} USDT\n💸 Required: {amount:,.2f} USDT","withdraw_created":"✅ Withdrawal request #{id} has been created.\n\n⏳ The request is waiting for administrative review.","admin_withdraw":"💸 New Withdrawal Request\n\n🆔 Request: #{id}\n👤 User: @{username}\nTelegram ID: {user_id}\n💳 Asset: {asset}\n🌐 Network: {network}\n💰 Amount: {amount:,.2f}\n📍 Destination wallet:\n{wallet}\n\nChoose an action:","approve_withdraw":"✅ Approve Withdrawal","withdraw_approved":"✅ Withdrawal request approved\n\n🆔 Request: #{id}\n💳 Asset: {asset}\n💰 Amount: {amount:,.2f}\n\nThe transfer will be processed and the TX Hash shared after completion.","withdraw_rejected":"❌ Withdrawal request #{id} was rejected.\n\nNo amount was deducted from your balance.",
-"admin_panel":"👨‍💼 Admin Panel\n\n/pending_deposits\n/pending_withdrawals\n/user_balance TELEGRAM_ID\n/system","no_pending_deposits":"📥 No pending deposit requests.","no_pending_withdrawals":"💸 No pending withdrawal requests.","unauthorized":"⛔ You are not authorized.","not_found":"❌ Request not found.","processed":"⚠️ This request has already been processed.","admin_insufficient":"❌ Insufficient balance.","admin_balance":"💰 User Balance\n\nTelegram ID: {id}\n💵 Available balance: {balance:,.2f} USDT\n🔒 Invested amount: {locked:,.2f} USDT\n📊 Active investments: {count}","system":"📊 System Status\n\n🟢 Bot is running\n👥 Users: {users}\n📥 Pending deposits: {deposits}\n💸 Pending withdrawals: {withdrawals}\n📊 Active investments: {investments}","no_investments":"📊 My Investments\n\nThere are currently no registered investments.","active":"🟢 #{id} — {plan}\n💰 Amount: {amount:,.2f} USDT\n🔒 Status: Active and locked\n⏳ Approximately remaining: {days} days and {hours} hours\n📅 End: {end} UTC\n━━━━━━━━━━━━━━\n","waiting":"🟡 #{id} — {plan}\n⏳ Waiting for settlement...\n━━━━━━━━━━━━━━\n","completed":"✅ #{id} — {plan}\n💰 Principal: {amount:,.2f} USDT\n📈 Target return: {profit:,.2f} USDT\n💵 Settled total: {total:,.2f} USDT\n🔓 Funds are now available.\n━━━━━━━━━━━━━━\n","status_text":"🤖 System Status\n\n🟢 The bot is running and accepting requests.\n🟢 Finished investments are monitored and settled automatically.","about":"🚀 Quantum Grow\n\nA digital platform for account, deposit, withdrawal and investment management.\n\n🏢 Technical background\nTrade Ideas LLC was founded in 2003 in the United States, with its listed address in Encinitas, California.\n\n🤖 We focus on technology, data analysis, AI-related tools and a structured digital experience.\n\nQuantum Grow\nTechnology • Intelligence • Transparency","completed_notice":"🎉 Investment cycle completed\n\n🆔 Investment: #{id}\n💰 Principal: {principal:,.2f} USDT\n📈 Target return: {profit:,.2f} USDT\n💵 Settled total: {total:,.2f} USDT\n\n✅ The amount is now available in your balance."
+"admin_panel":"👨‍💼 Admin Panel\n\n📢 To send a message or photo to all users, press “📢 Broadcast to Users” or use /broadcast.\n\n/pending_deposits\n/pending_withdrawals\n/user_balance TELEGRAM_ID\n/system","no_pending_deposits":"📥 No pending deposit requests.","no_pending_withdrawals":"💸 No pending withdrawal requests.","unauthorized":"⛔ You are not authorized.","not_found":"❌ Request not found.","processed":"⚠️ This request has already been processed.","admin_insufficient":"❌ Insufficient balance.","admin_balance":"💰 User Balance\n\nTelegram ID: {id}\n💵 Available balance: {balance:,.2f} USDT\n🔒 Invested amount: {locked:,.2f} USDT\n📊 Active investments: {count}","system":"📊 System Status\n\n🟢 Bot is running\n👥 Users: {users}\n📥 Pending deposits: {deposits}\n💸 Pending withdrawals: {withdrawals}\n📊 Active investments: {investments}","no_investments":"📊 My Investments\n\nThere are currently no registered investments.","active":"🟢 #{id} — {plan}\n💰 Amount: {amount:,.2f} USDT\n🔒 Status: Active and locked\n⏳ Approximately remaining: {days} days and {hours} hours\n📅 End: {end} UTC\n━━━━━━━━━━━━━━\n","waiting":"🟡 #{id} — {plan}\n⏳ Waiting for settlement...\n━━━━━━━━━━━━━━\n","completed":"✅ #{id} — {plan}\n💰 Principal: {amount:,.2f} USDT\n📈 Target return: {profit:,.2f} USDT\n💵 Settled total: {total:,.2f} USDT\n🔓 Funds are now available.\n━━━━━━━━━━━━━━\n","status_text":"🤖 System Status\n\n🟢 The bot is running and accepting requests.\n🟢 Finished investments are monitored and settled automatically.","about":"🚀 Quantum Grow\n\nA digital platform for account, deposit, withdrawal and investment management.\n\n🏢 Technical background\nTrade Ideas LLC was founded in 2003 in the United States, with its listed address in Encinitas, California.\n\n🤖 We focus on technology, data analysis, AI-related tools and a structured digital experience.\n\nQuantum Grow\nTechnology • Intelligence • Transparency","completed_notice":"🎉 Investment cycle completed\n\n🆔 Investment: #{id}\n💰 Principal: {principal:,.2f} USDT\n📈 Target return: {profit:,.2f} USDT\n💵 Settled total: {total:,.2f} USDT\n\n✅ The amount is now available in your balance."
 }
 T["en"] = EN
 
@@ -172,6 +172,9 @@ async def send_admin(text, markup=None):
 class DepositState(StatesGroup):
     amount = State()
     reference = State()
+
+class BroadcastState(StatesGroup):
+    content = State()
 
 @dp.message(CommandStart())
 async def start(message: Message):
@@ -470,15 +473,76 @@ async def status(message: Message):
 async def about(message: Message):
     await message.answer(tr(get_language(message.from_user.id),"about"))
 
+def admin_panel_keyboard(lang="ar"):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=tr(lang,"broadcast_button"), callback_data="admin:broadcast")]
+    ])
+
 @dp.message(F.text.in_(["👨‍💼 لوحة المسؤول","👨‍💼 Admin Panel"]))
 async def admin_button(message: Message):
-    if not is_admin(message.from_user.id): await message.answer(tr(get_language(message.from_user.id),"unauthorized")); return
-    await message.answer(tr("ar","admin_panel"))
+    if not is_admin(message.from_user.id):
+        await message.answer(tr(get_language(message.from_user.id),"unauthorized")); return
+    await message.answer(tr("ar","admin_panel"), reply_markup=admin_panel_keyboard("ar"))
 
 @dp.message(Command("admin"))
 async def admin(message: Message):
-    if is_admin(message.from_user.id): await message.answer(tr("ar","admin_panel"))
-    else: await message.answer(tr(get_language(message.from_user.id),"unauthorized"))
+    if is_admin(message.from_user.id):
+        await message.answer(tr("ar","admin_panel"), reply_markup=admin_panel_keyboard("ar"))
+    else:
+        await message.answer(tr(get_language(message.from_user.id),"unauthorized"))
+
+@dp.callback_query(F.data == "admin:broadcast")
+async def start_broadcast(callback: CallbackQuery, state: FSMContext):
+    if not is_admin(callback.from_user.id):
+        await callback.answer(tr("ar","unauthorized"), show_alert=True); return
+    await state.clear()
+    await state.set_state(BroadcastState.content)
+    await callback.message.answer(tr("ar","broadcast_prompt"))
+    await callback.answer()
+
+@dp.message(Command("broadcast"))
+async def broadcast_command(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        await message.answer(tr(get_language(message.from_user.id),"unauthorized")); return
+    await state.clear()
+    await state.set_state(BroadcastState.content)
+    await message.answer(tr("ar","broadcast_prompt"))
+
+@dp.message(Command("cancel_broadcast"))
+async def cancel_broadcast(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        await message.answer(tr(get_language(message.from_user.id),"unauthorized")); return
+    await state.clear()
+    await message.answer(tr("ar","broadcast_cancelled"))
+
+@dp.message(BroadcastState.content)
+async def broadcast_content(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        await state.clear()
+        await message.answer(tr(get_language(message.from_user.id),"unauthorized")); return
+
+    # Only text and photos are enabled for the requested broadcast feature.
+    if not message.text and not message.photo:
+        await message.answer(tr("ar","broadcast_unsupported")); return
+
+    with SessionLocal() as db:
+        users = db.scalars(select(User)).all()
+        user_ids = [u.telegram_id for u in users if u.is_active]
+
+    sent = 0
+    failed = 0
+    for uid in user_ids:
+        try:
+            # copy_message preserves the text/photo and its caption without exposing the admin's chat.
+            await bot.copy_message(chat_id=uid, from_chat_id=message.chat.id, message_id=message.message_id)
+            sent += 1
+        except Exception as e:
+            failed += 1
+            print(f"Broadcast failed for {uid}: {e}")
+        await asyncio.sleep(0.05)
+
+    await state.clear()
+    await message.answer(tr("ar","broadcast_done", sent=sent, failed=failed), reply_markup=admin_panel_keyboard("ar"))
 
 @dp.message(Command("pending_deposits"))
 async def pending_deposits(message: Message):
